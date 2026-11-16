@@ -1,0 +1,32 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Збірка .NET
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.log
+
+# NuGet
+*.nupkg
+packages/
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# Секрети
+appsettings.*.local.json
+*.env
+.env
+
+# Системне
+Thumbs.db
+.DS_Store
