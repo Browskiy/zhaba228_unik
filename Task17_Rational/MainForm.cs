@@ -2,7 +2,6 @@ namespace Task17_Rational;
 
 public partial class MainForm : Form
 {
-    // Массив рациональных чисел, которые ввёл пользователь (хранится в памяти программы).
     private Rational[] numbers = Array.Empty<Rational>();
 
     public MainForm()
@@ -11,7 +10,6 @@ public partial class MainForm : Form
         UpdateCount();
     }
 
-    /// <summary>Кнопка «Добавить»: добавляет новый объект структуры в память программы.</summary>
     private void btnAdd_Click(object sender, EventArgs e)
     {
         if (!int.TryParse(txtNumerator.Text.Trim(), out int numerator))
@@ -45,7 +43,6 @@ public partial class MainForm : Form
         txtNumerator.Focus();
     }
 
-    /// <summary>Кнопка «Найти максимум».</summary>
     private void btnFindMax_Click(object sender, EventArgs e)
     {
         if (numbers.Length == 0)
@@ -60,26 +57,22 @@ public partial class MainForm : Form
         AskRepeat();
     }
 
-    /// <summary>Кнопка «Очистить»: очищает все поля и массив.</summary>
     private void btnClear_Click(object sender, EventArgs e)
     {
         ClearFields();
     }
 
-    /// <summary>Кнопка «Выход»: завершает программу.</summary>
     private void btnExit_Click(object sender, EventArgs e)
     {
         Close();
     }
 
-    /// <summary>Сообщение о некорректном вводе данных.</summary>
     private void ShowInputError(string message, Control field)
     {
         MessageBox.Show(message, "Некорректный ввод", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         field.Focus();
     }
 
-    /// <summary>Спрашивает, повторить ли работу программы.</summary>
     private void AskRepeat()
     {
         DialogResult answer = MessageBox.Show(
