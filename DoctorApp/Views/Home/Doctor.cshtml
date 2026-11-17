@@ -1,0 +1,28 @@
+@{
+    ViewData["Title"] = "Главная";
+    var doctor = ViewBag.Doctor as Doctor;
+    var today = ViewBag.Today as List<Appointment> ?? new();
+    var ru = new System.Globalization.CultureInfo("ru-RU");
+    var next = today.FirstOrDefault(a => a.Status == AppointmentStatus.Scheduled && a.StartTime > DateTime.Now);
+}
+
+<div class="page-head">
+    <div>
+        <h1>Приём на сегодня</h1>
+        <p>@DateTime.Today.ToString("dddd, d MMMM", ru)@(doctor != null ? $" · {doctor.Specialty!.Name}, кабинет {doctor.Cabinet}" : "")</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Appointments" asp-action="DoctorDay"><i class="bi bi-people"></i> Открыть список пациентов</a>
+</div>
+
+@if (doctor == null)
+{
+    <div class="card-x empty"><i class="bi bi-link-45deg"></i>Учётная запись не привязана к врачу. Обратитесь к администратору.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-people"></i> Пациентов сегодня</div><div class="value">@today.Count</div></div></div>
+        <div class="col-6 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-check2-circle"></i> Принято</div><div class="value text-success">@today.Count(a => a.Status == AppointmentStatus.Completed)</div></div></div>
+        <div class="col-12 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-arrow-right-circle"></i> Следующий</div><div class="value fs-5 mt-2">@(next != null ? $"{next.StartTime:HH:mm} — {next.Patient!.FullName}" : "—")</div></div></div>
+    </div>
+}

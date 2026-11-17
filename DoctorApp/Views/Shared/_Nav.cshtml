@@ -1,0 +1,51 @@
+@using System.Security.Claims
+@inject DoctorApp.Services.NotificationService Notifications
+@{
+    string controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string action = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string Active(string c, string? a = null) => controller == c && (a == null || action == a) ? "side-link active" : "side-link";
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
+    string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    int unread = userId == null ? 0 : await Notifications.UnreadCountAsync(int.Parse(userId));
+}
+
+<nav>
+    <a class="@Active("Home")" asp-controller="Home" asp-action="Index"><i class="bi bi-house"></i> Главная</a>
+
+    @if (User.IsInRole("Patient"))
+    {
+        <div class="nav-section">Запись</div>
+        <a class="@Active("Doctors")" asp-controller="Doctors" asp-action="Index"><i class="bi bi-calendar-plus"></i> Записаться к врачу</a>
+        <a class="@Active("Appointments", "My")" asp-controller="Appointments" asp-action="My"><i class="bi bi-calendar-check"></i> Мои записи</a>
+    }
+
+    @if (staff)
+    {
+        <div class="nav-section">Регистратура</div>
+        <a class="@Active("Appointments", "All")" asp-controller="Appointments" asp-action="All"><i class="bi bi-journal-medical"></i> Журнал записей</a>
+        <a class="@Active("Doctors")" asp-controller="Doctors" asp-action="Index"><i class="bi bi-person-badge"></i> Врачи и запись</a>
+        <a class="@Active("Reports")" asp-controller="Reports" asp-action="Index"><i class="bi bi-bar-chart-line"></i> Отчёты</a>
+    }
+
+    @if (User.IsInRole("Doctor"))
+    {
+        <div class="nav-section">Приём</div>
+        <a class="@Active("Appointments", "DoctorDay")" asp-controller="Appointments" asp-action="DoctorDay"><i class="bi bi-people"></i> Мои пациенты</a>
+        <a class="@Active("Doctors")" asp-controller="Doctors" asp-action="Index"><i class="bi bi-person-badge"></i> Врачи</a>
+    }
+
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="nav-section">Администрирование</div>
+        <a class="@Active("Users")" asp-controller="Users" asp-action="Index"><i class="bi bi-people-fill"></i> Пользователи</a>
+    }
+
+    <div class="nav-section">Прочее</div>
+    <a class="@Active("Notifications")" asp-controller="Notifications" asp-action="Index">
+        <i class="bi bi-bell"></i> Уведомления
+        @if (unread > 0)
+        {
+            <span class="count">@unread</span>
+        }
+    </a>
+</nav>

@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Главная";
+    var next = ViewBag.Next as Appointment;
+    var ru = new System.Globalization.CultureInfo("ru-RU");
+    string firstName = (User.Identity?.Name ?? "").Split(' ').Skip(1).FirstOrDefault() ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Здравствуйте@(string.IsNullOrEmpty(firstName) ? "" : ", " + firstName)!</h1>
+        <p>Что вы хотите сделать?</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-4">
+        <a class="card-x tile primary" asp-controller="Doctors" asp-action="Index">
+            <div class="tile-icon"><i class="bi bi-calendar-plus"></i></div>
+            <div><h3>Записаться к врачу</h3><p>Выбрать специалиста и свободное время</p></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <a class="card-x tile" asp-controller="Appointments" asp-action="My">
+            <div class="tile-icon"><i class="bi bi-calendar-check"></i></div>
+            <div><h3>Мои записи</h3><p>Предстоящих: @ViewBag.UpcomingCount · визитов: @ViewBag.VisitCount</p></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-xl-4">
+        <a class="card-x tile" asp-controller="Notifications" asp-action="Index">
+            <div class="tile-icon"><i class="bi bi-bell"></i></div>
+            <div><h3>Уведомления</h3><p>Напоминания и изменения записей</p></div>
+        </a>
+    </div>
+</div>
+
+<div class="card-x">
+    <div class="card-head"><h2>Ближайший приём</h2></div>
+    @if (next != null)
+    {
+        <div class="card-pad d-flex flex-wrap align-items-center gap-3">
+            <div class="date-block">
+                <div class="d">@next.StartTime.Day</div>
+                <div class="m">@next.StartTime.ToString("MMM", ru)</div>
+            </div>
+            <div class="flex-grow-1">
+                <div class="fs-5 fw-semibold">@next.StartTime.ToString("dddd, HH:mm", ru)</div>
+                <div class="text-muted">@next.Doctor!.Specialty!.Name · @next.Doctor.FullName · кабинет @next.Doctor.Cabinet</div>
+            </div>
+            <a class="btn btn-soft" asp-controller="Appointments" asp-action="My">Подробнее</a>
+        </div>
+    }
+    else
+    {
+        <div class="empty">
+            <i class="bi bi-calendar"></i>
+            Запланированных приёмов нет
+            <div class="mt-3"><a class="btn btn-primary" asp-controller="Doctors" asp-action="Index">Записаться</a></div>
+        </div>
+    }
+</div>

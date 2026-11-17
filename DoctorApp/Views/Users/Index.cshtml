@@ -3,30 +3,44 @@
     ViewData["Title"] = "Пользователи";
 }
 
-<h2>Пользователи и роли</h2>
+<div class="page-head">
+    <div>
+        <h1>Пользователи</h1>
+        <p>Назначайте роли: пациент, регистратор, врач, администратор</p>
+    </div>
+</div>
 
-<table class="table align-middle">
-    <thead class="table-light"><tr><th>ФИО</th><th>Логин</th><th>Телефон</th><th>Зарегистрирован</th><th>Роль</th></tr></thead>
-    <tbody>
-        @foreach (var u in Model)
-        {
-            <tr>
-                <td>@u.FullName</td>
-                <td>@u.Login</td>
-                <td>@u.Phone</td>
-                <td>@u.CreatedAt.ToString("dd.MM.yyyy")</td>
-                <td>
-                    <form asp-action="SetRole" asp-route-id="@u.Id" method="post" class="d-flex gap-2">
-                        <select name="role" class="form-select form-select-sm" style="max-width:180px">
-                            @foreach (UserRole r in Enum.GetValues<UserRole>())
-                            {
-                                <option value="@r" selected="@(r == u.Role)">@r.ToRussian()</option>
-                            }
-                        </select>
-                        <button class="btn btn-sm btn-outline-primary">Сохранить</button>
-                    </form>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="card-x">
+    <div class="table-responsive">
+        <table class="table table-x">
+            <thead><tr><th>Пользователь</th><th>Логин</th><th>Телефон</th><th>С нами с</th><th>Роль</th></tr></thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar sm @u.FullName.AvatarClass()">@u.FullName.Initials()</div>
+                                <span class="fw-semibold">@u.FullName</span>
+                            </div>
+                        </td>
+                        <td class="text-muted">@u.Login</td>
+                        <td>@u.Phone</td>
+                        <td>@u.CreatedAt.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            <form asp-action="SetRole" asp-route-id="@u.Id" method="post" class="d-flex gap-2 align-items-center">
+                                <i class="bi @u.Role.RoleIcon() text-muted"></i>
+                                <select name="role" class="form-select form-select-sm" style="max-width:170px" onchange="this.form.submit()">
+                                    @foreach (UserRole r in Enum.GetValues<UserRole>())
+                                    {
+                                        <option value="@r" selected="@(r == u.Role)">@r.ToRussian()</option>
+                                    }
+                                </select>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

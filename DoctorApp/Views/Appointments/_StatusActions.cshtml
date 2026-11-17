@@ -4,10 +4,10 @@
 {
     <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post" class="d-inline">
         <input type="hidden" name="status" value="@AppointmentStatus.Completed" />
-        <button class="btn btn-sm btn-outline-success">Проведён</button>
+        <button class="btn btn-sm btn-soft" title="Пациент пришёл, приём проведён"><i class="bi bi-check2"></i> Пришёл</button>
     </form>
     <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post" class="d-inline">
         <input type="hidden" name="status" value="@AppointmentStatus.NoShow" />
-        <button class="btn btn-sm btn-outline-danger">Неявка</button>
+        <button class="btn btn-sm btn-light text-danger" title="Пациент не пришёл"><i class="bi bi-person-x"></i> Не пришёл</button>
     </form>
 }

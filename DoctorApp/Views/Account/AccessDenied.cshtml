@@ -2,8 +2,9 @@
     ViewData["Title"] = "Нет доступа";
 }
 
-<div class="alert alert-warning">
-    <h4>Нет доступа</h4>
-    <p class="mb-0">У вашей учётной записи нет прав на эту страницу.</p>
+<div class="card-x empty">
+    <i class="bi bi-shield-lock"></i>
+    <h1 class="h4 text-dark">Нет доступа</h1>
+    <p>Эта страница недоступна для вашей роли.</p>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">На главную</a>
 </div>
-<a asp-controller="Home" asp-action="Index">На главную</a>

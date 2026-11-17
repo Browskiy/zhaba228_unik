@@ -1,67 +1,94 @@
 @model List<Doctor>
 @{
-    ViewData["Title"] = "Врачи";
     bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
+    bool patient = User.IsInRole("Patient");
+    ViewData["Title"] = patient ? "Запись к врачу" : "Врачи";
+    var specialties = (List<Specialty>)ViewBag.SpecialtyList;
+    int? current = ViewBag.SpecialtyId;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Врачи</h2>
+@if (patient)
+{
+    <div class="steps">
+        <div class="step current"><span class="n">1</span> Выберите врача</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step"><span class="n">2</span> День и время</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step"><span class="n">3</span> Подтверждение</div>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <h1>@(patient ? "К какому врачу записаться?" : "Врачи")</h1>
+        <p>@(staff ? "Чтобы записать пациента, нажмите «Записать» у нужного врача" : "Выберите специальность или найдите врача по фамилии")</p>
+    </div>
     @if (staff)
     {
-        <a class="btn btn-success" asp-action="Create">+ Добавить врача</a>
+        <a class="btn btn-light" asp-action="Create"><i class="bi bi-plus-lg"></i> Добавить врача</a>
     }
 </div>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-md-4">
-        <select name="specialtyId" class="form-select" asp-items="ViewBag.Specialties">
-            <option value="">Все специальности</option>
-        </select>
+<form method="get" class="mb-3">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a class="chip @(current == null ? "active" : "")" asp-route-search="@ViewBag.Search">Все</a>
+        @foreach (var s in specialties)
+        {
+            <a class="chip @(current == s.Id ? "active" : "")" asp-route-specialtyId="@s.Id" asp-route-search="@ViewBag.Search">@s.Name</a>
+        }
     </div>
-    <div class="col-md-5">
+    @if (current != null)
+    {
+        <input type="hidden" name="specialtyId" value="@current" />
+    }
+    <div class="input-group" style="max-width:420px">
+        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
         <input name="search" value="@ViewBag.Search" class="form-control" placeholder="Поиск по фамилии" />
-    </div>
-    <div class="col-md-3">
-        <button class="btn btn-primary w-100">Найти</button>
+        <button class="btn btn-primary">Найти</button>
     </div>
 </form>
 
-<table class="table table-hover align-middle">
-    <thead class="table-light">
-        <tr>
-            <th>Специальность</th>
-            <th>Врач</th>
-            <th>Кабинет</th>
-            <th>Часы приёма</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var d in Model)
-        {
-            <tr class="@(d.IsActive ? "" : "text-muted")">
-                <td>@d.Specialty!.Name</td>
-                <td>@d.FullName @if (!d.IsActive) { <span class="badge bg-secondary">не ведёт приём</span> }</td>
-                <td>@d.Cabinet</td>
-                <td>@d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm"), по @d.SlotMinutes мин</td>
-                <td class="text-end text-nowrap">
+@if (Model.Count == 0)
+{
+    <div class="card-x empty"><i class="bi bi-person-x"></i>Врачи не найдены</div>
+}
+
+<div class="row g-3">
+    @foreach (var d in Model)
+    {
+        <div class="col-md-6 col-xl-4">
+            <div class="card-x doctor-card @(d.IsActive ? "" : "opacity-50")">
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="avatar @d.FullName.AvatarClass()">@d.FullName.Initials()</div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">@d.FullName</div>
+                        <span class="pill spec">@d.Specialty!.Name</span>
+                        @if (!d.IsActive)
+                        {
+                            <span class="pill st-2">не ведёт приём</span>
+                        }
+                    </div>
+                </div>
+                <div class="meta">
+                    <span><i class="bi bi-door-open"></i> Кабинет @d.Cabinet</span>
+                    <span><i class="bi bi-clock"></i> @d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm"), приём @d.SlotMinutes мин</span>
+                </div>
+                <div class="d-flex gap-2 mt-auto">
                     @if (d.IsActive)
                     {
-                        <a class="btn btn-sm btn-primary" asp-action="Schedule" asp-route-id="@d.Id">Расписание и запись</a>
+                        <a class="btn btn-primary flex-grow-1" asp-action="Schedule" asp-route-id="@d.Id">
+                            @(patient ? "Записаться" : staff ? "Записать" : "Расписание")
+                        </a>
                     }
                     @if (staff)
                     {
-                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@d.Id">Изменить</a>
-                        <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="return confirm('Удалить врача @d.FullName?');">
-                            <button class="btn btn-sm btn-outline-danger">Удалить</button>
+                        <a class="btn btn-light" asp-action="Edit" asp-route-id="@d.Id" title="Изменить"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Delete" asp-route-id="@d.Id" method="post" onsubmit="return confirm('Удалить врача @d.FullName?');">
+                            <button class="btn btn-light text-danger" title="Удалить"><i class="bi bi-trash"></i></button>
                         </form>
                     }
-                </td>
-            </tr>
-        }
-        @if (Model.Count == 0)
-        {
-            <tr><td colspan="5" class="text-center text-muted">Врачи не найдены</td></tr>
-        }
-    </tbody>
-</table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

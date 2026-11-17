@@ -1,30 +1,39 @@
 @model List<Notification>
 @{
     ViewData["Title"] = "Уведомления";
+    string Icon(string text) => text.StartsWith("Напоминание") ? "bi-alarm" : text.Contains("отменена") ? "bi-x-circle" : text.Contains("перенесена") ? "bi-arrow-repeat" : text.Contains("неявка") ? "bi-person-x" : text.StartsWith("Вы записаны") ? "bi-calendar-check" : "bi-bell";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Уведомления</h2>
+<div class="page-head">
+    <div>
+        <h1>Уведомления</h1>
+        <p>Записи, переносы, отмены и напоминания о приёме</p>
+    </div>
     @if (Model.Any(n => !n.IsRead))
     {
         <form asp-action="MarkAllRead" method="post">
-            <button class="btn btn-outline-secondary btn-sm">Отметить все как прочитанные</button>
+            <button class="btn btn-light"><i class="bi bi-check2-all"></i> Прочитать все</button>
         </form>
     }
 </div>
 
-<div class="list-group">
-    @foreach (var n in Model)
-    {
-        <div class="list-group-item @(n.IsRead ? "" : "list-group-item-warning")">
-            <div class="d-flex justify-content-between">
-                <span>@n.Text</span>
-                <small class="text-muted text-nowrap ms-3">@n.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
-            </div>
-        </div>
-    }
+<div class="card-x">
     @if (Model.Count == 0)
     {
-        <div class="text-muted">Уведомлений нет</div>
+        <div class="empty"><i class="bi bi-bell-slash"></i>Уведомлений нет</div>
+    }
+    @foreach (var n in Model)
+    {
+        <div class="notif @(n.IsRead ? "" : "unread")">
+            <div class="ico"><i class="bi @Icon(n.Text)"></i></div>
+            <div class="flex-grow-1">
+                <div>@n.Text</div>
+                <div class="small text-muted">@n.CreatedAt.ToString("dd.MM.yyyy HH:mm")</div>
+            </div>
+            @if (!n.IsRead)
+            {
+                <span class="dot mt-2"></span>
+            }
+        </div>
     }
 </div>

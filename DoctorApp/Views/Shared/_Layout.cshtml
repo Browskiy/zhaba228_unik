@@ -1,87 +1,88 @@
-﻿<!DOCTYPE html>
+﻿@{
+    bool auth = User.Identity?.IsAuthenticated == true;
+    string roleName = User.IsInRole("Admin") ? "Администратор" : User.IsInRole("Registrar") ? "Регистратор" : User.IsInRole("Doctor") ? "Врач" : "Пациент";
+    string userName = User.Identity?.Name ?? "";
+}
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — Электронная регистратура</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-            <div class="container">
-                <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">🏥 Электронная регистратура</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="mainNav">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item"><a class="nav-link" asp-controller="Doctors" asp-action="Index">Врачи</a></li>
-                        @if (User.IsInRole("Patient"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Appointments" asp-action="My">Мои записи</a></li>
-                        }
-                        @if (User.IsInRole("Admin") || User.IsInRole("Registrar"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Appointments" asp-action="All">Журнал записей</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Reports" asp-action="Index">Отчёты</a></li>
-                        }
-                        @if (User.IsInRole("Doctor"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Appointments" asp-action="DoctorDay">Мои пациенты</a></li>
-                        }
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Users" asp-action="Index">Пользователи</a></li>
-                        }
-                    </ul>
-                    <ul class="navbar-nav align-items-lg-center">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            var badge = await Component.InvokeAsync("NotificationBadge");
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Notifications" asp-action="Index">
-                                    🔔 Уведомления <span class="badge bg-warning text-dark">@badge</span>
-                                </a>
-                            </li>
-                            <li class="nav-item"><span class="navbar-text text-white-50 mx-lg-2">@User.Identity.Name</span></li>
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-light">Выйти</button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Account" asp-action="Login">Вход</a></li>
-                            <li class="nav-item"><a class="btn btn-sm btn-light ms-lg-2" asp-controller="Account" asp-action="Register">Регистрация</a></li>
-                        }
-                    </ul>
+    @if (auth)
+    {
+        <div class="app">
+            <aside class="sidebar d-none d-lg-flex">
+                <a class="brand" asp-controller="Home" asp-action="Index">
+                    <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
+                    <span>Регистратура<small>запись к врачу онлайн</small></span>
+                </a>
+                <partial name="_Nav" />
+                <div class="user-card">
+                    <div class="avatar sm @userName.AvatarClass()">@userName.Initials()</div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="name text-truncate">@userName</div>
+                        <div class="role">@roleName</div>
+                    </div>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button type="submit" class="btn btn-light btn-sm" title="Выйти"><i class="bi bi-box-arrow-right"></i></button>
+                    </form>
+                </div>
+            </aside>
+
+            <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileNav" style="width:var(--sidebar-w)">
+                <div class="offcanvas-body d-flex flex-column">
+                    <a class="brand" asp-controller="Home" asp-action="Index">
+                        <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
+                        <span>Регистратура<small>запись к врачу онлайн</small></span>
+                    </a>
+                    <partial name="_Nav" />
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="mt-auto pt-3">
+                        <button type="submit" class="btn btn-light w-100"><i class="bi bi-box-arrow-right"></i> Выйти</button>
+                    </form>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["Success"] is string ok)
-            {
-                <div class="alert alert-success">@ok</div>
-            }
-            @if (TempData["Error"] is string err)
-            {
-                <div class="alert alert-danger">@err</div>
-            }
+
+            <div class="main">
+                <div class="topbar d-lg-none">
+                    <button class="btn btn-light" data-bs-toggle="offcanvas" data-bs-target="#mobileNav"><i class="bi bi-list"></i></button>
+                    <span class="fw-semibold">Регистратура</span>
+                    <a class="btn btn-light" asp-controller="Notifications" asp-action="Index"><i class="bi bi-bell"></i></a>
+                </div>
+                <main class="content">
+                    <partial name="_Flash" />
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    }
+    else
+    {
+        <header class="guest-top">
+            <div class="inner">
+                <a class="brand p-0" asp-controller="Home" asp-action="Index">
+                    <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
+                    <span>Регистратура<small>запись к врачу онлайн</small></span>
+                </a>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-light" asp-controller="Account" asp-action="Login">Войти</a>
+                    <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Регистрация</a>
+                </div>
+            </div>
+        </header>
+        <main class="guest-content">
+            <partial name="_Flash" />
             @RenderBody()
         </main>
-    </div>
+    }
 
-    <footer class="border-top footer text-muted">
-        <div class="container">&copy; 2026 — Электронная регистратура поликлиники</div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

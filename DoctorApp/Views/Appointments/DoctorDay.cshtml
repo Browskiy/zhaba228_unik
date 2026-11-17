@@ -3,34 +3,54 @@
     ViewData["Title"] = "Мои пациенты";
     DateTime date = ViewBag.Date;
     Doctor doctor = ViewBag.Doctor;
+    var ru = new System.Globalization.CultureInfo("ru-RU");
 }
 
-<h2>Мои пациенты</h2>
-<p class="text-muted">@doctor.FullName · @doctor.Specialty!.Name · кабинет @doctor.Cabinet</p>
-
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <input type="date" name="date" value="@date.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+<div class="page-head">
+    <div>
+        <h1>Мои пациенты</h1>
+        <p>@doctor.FullName · @doctor.Specialty!.Name · кабинет @doctor.Cabinet</p>
     </div>
-</form>
+</div>
 
-<table class="table align-middle">
-    <thead class="table-light"><tr><th>Время</th><th>Пациент</th><th>Дата рождения</th><th>Телефон</th><th>Статус</th><th></th></tr></thead>
-    <tbody>
-        @foreach (var a in Model)
-        {
-            <tr>
-                <td class="fw-semibold">@a.StartTime.ToString("HH:mm")</td>
-                <td>@a.Patient!.FullName</td>
-                <td>@a.Patient.BirthDate?.ToString("dd.MM.yyyy")</td>
-                <td>@a.Patient.Phone</td>
-                <td><span class="badge @a.Status.BadgeClass()">@a.Status.ToRussian()</span></td>
-                <td class="text-end text-nowrap"><partial name="_StatusActions" model="a" /></td>
-            </tr>
-        }
-        @if (Model.Count == 0)
-        {
-            <tr><td colspan="6" class="text-center text-muted">На эту дату пациентов нет</td></tr>
-        }
-    </tbody>
-</table>
+<div class="card-x mb-3">
+    <form method="get" class="card-pad d-flex flex-wrap align-items-center gap-2">
+        <a class="btn btn-light" asp-route-date="@date.AddDays(-1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-left"></i></a>
+        <input type="date" name="date" value="@date.ToString("yyyy-MM-dd")" class="form-control" style="max-width:170px" onchange="this.form.submit()" />
+        <a class="btn btn-light" asp-route-date="@date.AddDays(1).ToString("yyyy-MM-dd")"><i class="bi bi-chevron-right"></i></a>
+        <a class="btn btn-light" asp-action="DoctorDay">Сегодня</a>
+        <span class="fw-semibold ms-2">@date.ToString("dddd, d MMMM", ru)</span>
+    </form>
+</div>
+
+<div class="card-x">
+    @if (Model.Count == 0)
+    {
+        <div class="empty"><i class="bi bi-cup-hot"></i>На этот день пациентов нет</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-x">
+                <thead><tr><th>Время</th><th>Пациент</th><th>Дата рождения</th><th>Статус</th><th class="text-end"></th></tr></thead>
+                <tbody>
+                    @foreach (var a in Model)
+                    {
+                        <tr>
+                            <td class="time-cell">@a.StartTime.ToString("HH:mm")</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar sm @a.Patient!.FullName.AvatarClass()">@a.Patient.FullName.Initials()</div>
+                                    <div><div class="fw-semibold">@a.Patient.FullName</div><div class="small text-muted">@a.Patient.Phone</div></div>
+                                </div>
+                            </td>
+                            <td>@a.Patient.BirthDate?.ToString("dd.MM.yyyy")</td>
+                            <td><span class="@a.Status.BadgeClass()"><i class="bi @a.Status.Icon()"></i> @a.Status.ToRussian()</span></td>
+                            <td class="text-end text-nowrap"><partial name="_StatusActions" model="a" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

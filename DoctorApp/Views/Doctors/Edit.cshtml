@@ -3,14 +3,22 @@
     ViewData["Title"] = Model.Id == 0 ? "Новый врач" : "Изменение врача";
 }
 
-<h2>@ViewData["Title"]</h2>
+<div class="page-head">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        <p>Карточка врача и часы приёма</p>
+    </div>
+    <a asp-action="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> К списку врачей</a>
+</div>
 
-<form asp-action="Save" method="post" class="col-md-8">
+<form asp-action="Save" method="post" class="card-x card-pad" style="max-width:760px">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input type="hidden" asp-for="Id" />
+
+    <h2 class="h6 text-muted mb-3">Основное</h2>
     <div class="mb-3">
         <label asp-for="FullName" class="form-label"></label>
-        <input asp-for="FullName" class="form-control" />
+        <input asp-for="FullName" class="form-control" placeholder="Фамилия Имя Отчество" />
         <span asp-validation-for="FullName" class="text-danger small"></span>
     </div>
     <div class="row">
@@ -24,6 +32,8 @@
             <span asp-validation-for="Cabinet" class="text-danger small"></span>
         </div>
     </div>
+
+    <h2 class="h6 text-muted mb-3 mt-2">Часы приёма</h2>
     <div class="row">
         <div class="col-md-4 mb-3">
             <label asp-for="WorkStart" class="form-label"></label>
@@ -40,18 +50,23 @@
             <span asp-validation-for="SlotMinutes" class="text-danger small"></span>
         </div>
     </div>
+
+    <h2 class="h6 text-muted mb-3 mt-2">Доступ</h2>
     <div class="mb-3">
         <label asp-for="UserId" class="form-label"></label>
         <select asp-for="UserId" class="form-select" asp-items="ViewBag.DoctorUsers">
             <option value="">— не привязана —</option>
         </select>
+        <div class="form-text">Под этой учётной записью врач увидит своих пациентов</div>
     </div>
-    <div class="form-check mb-3">
+    <div class="form-check form-switch mb-4">
         <input asp-for="IsActive" class="form-check-input" />
         <label asp-for="IsActive" class="form-check-label"></label>
     </div>
-    <button type="submit" class="btn btn-primary">Сохранить</button>
-    <a asp-action="Index" class="btn btn-link">Отмена</a>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Сохранить</button>
+        <a asp-action="Index" class="btn btn-light">Отмена</a>
+    </div>
 </form>
 
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

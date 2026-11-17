@@ -54,7 +54,9 @@ public class DoctorScheduleViewModel
     public DateTime Date { get; set; }
     public List<DateTime> FreeSlots { get; set; } = new();
     public int? RescheduleId { get; set; }
+    public Appointment? Rescheduling { get; set; }
     public List<User> Patients { get; set; } = new();
+    public List<(DateTime Day, int Free)> Days { get; set; } = new();
 }
 
 public class ReportRow

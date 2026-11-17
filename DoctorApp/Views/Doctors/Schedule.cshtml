@@ -1,80 +1,156 @@
 @model DoctorScheduleViewModel
 @{
-    ViewData["Title"] = "Расписание врача";
     bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
     bool canBook = staff || User.IsInRole("Patient");
-}
-
-<h2>@Model.Doctor.FullName</h2>
-<p class="text-muted">@Model.Doctor.Specialty!.Name · кабинет @Model.Doctor.Cabinet ·
-    приём @Model.Doctor.WorkStart.ToString("HH:mm")–@Model.Doctor.WorkEnd.ToString("HH:mm")</p>
-
-@if (Model.RescheduleId != null)
-{
-    <div class="alert alert-info">Выберите новое время для переноса записи.</div>
-}
-
-<form method="get" class="row g-2 mb-3">
-    <input type="hidden" name="id" value="@Model.Doctor.Id" />
-    @if (Model.RescheduleId != null)
+    bool reschedule = Model.RescheduleId != null;
+    var ru = new System.Globalization.CultureInfo("ru-RU");
+    ViewData["Title"] = reschedule ? "Перенос записи" : "Запись к врачу";
+    var groups = new[]
     {
-        <input type="hidden" name="rescheduleId" value="@Model.RescheduleId" />
-    }
-    <div class="col-auto">
-        <a class="btn btn-outline-secondary" asp-route-id="@Model.Doctor.Id" asp-route-date="@Model.Date.AddDays(-1).ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">←</a>
-    </div>
-    <div class="col-auto">
-        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
-    </div>
-    <div class="col-auto">
-        <a class="btn btn-outline-secondary" asp-route-id="@Model.Doctor.Id" asp-route-date="@Model.Date.AddDays(1).ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">→</a>
-    </div>
-    <div class="col-auto align-self-center fw-semibold">
-        @Model.Date.ToString("dddd, d MMMM", new System.Globalization.CultureInfo("ru-RU"))
-    </div>
-</form>
-
-@if (Model.FreeSlots.Count == 0)
-{
-    <div class="alert alert-secondary">На эту дату свободного времени нет. Выберите другой день.</div>
+        ("Утро", Model.FreeSlots.Where(s => s.Hour < 12).ToList()),
+        ("День", Model.FreeSlots.Where(s => s.Hour >= 12 && s.Hour < 16).ToList()),
+        ("Вечер", Model.FreeSlots.Where(s => s.Hour >= 16).ToList())
+    };
 }
-else if (!canBook)
+
+@if (canBook && !reschedule)
 {
-    <p>Свободное время:</p>
-    <div class="d-flex flex-wrap gap-2">
-        @foreach (var slot in Model.FreeSlots)
+    <div class="steps">
+        <div class="step done"><span class="n"><i class="bi bi-check"></i></span> Врач выбран</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step current"><span class="n">2</span> День и время</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step"><span class="n">3</span> Подтверждение</div>
+    </div>
+}
+
+<div class="card-x card-pad mb-3 d-flex flex-wrap align-items-center gap-3">
+    <div class="avatar lg @Model.Doctor.FullName.AvatarClass()">@Model.Doctor.FullName.Initials()</div>
+    <div class="flex-grow-1">
+        <h1 class="h4 fw-bold mb-1">@Model.Doctor.FullName</h1>
+        <div class="text-muted">
+            <span class="pill spec me-1">@Model.Doctor.Specialty!.Name</span>
+            <i class="bi bi-door-open ms-1"></i> кабинет @Model.Doctor.Cabinet
+            <i class="bi bi-clock ms-2"></i> @Model.Doctor.WorkStart.ToString("HH:mm")–@Model.Doctor.WorkEnd.ToString("HH:mm")
+        </div>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Другой врач</a>
+</div>
+
+@if (reschedule && Model.Rescheduling != null)
+{
+    <div class="alert alert-info flash"><i class="bi bi-arrow-repeat"></i>
+        Перенос записи с <strong>@Model.Rescheduling.StartTime.ToString("d MMMM, HH:mm", ru)</strong>. Выберите новое время.</div>
+}
+
+<div class="card-x mb-3">
+    <div class="card-head">
+        <h2>1. Выберите день</h2>
+        <form method="get" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="id" value="@Model.Doctor.Id" />
+            @if (reschedule)
+            {
+                <input type="hidden" name="rescheduleId" value="@Model.RescheduleId" />
+            }
+            <label class="small text-muted text-nowrap">другая дата</label>
+            <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control form-control-sm" onchange="this.form.submit()" />
+        </form>
+    </div>
+    <div class="card-pad">
+        <div class="day-strip">
+            @foreach (var (day, free) in Model.Days)
+            {
+                <a class="day @(day == Model.Date ? "active" : "")" asp-route-id="@Model.Doctor.Id" asp-route-date="@day.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">
+                    <div class="dw">@(day == DateTime.Today ? "сегодня" : day.ToString("ddd", ru))</div>
+                    <div class="dn">@day.Day</div>
+                    <div class="free @(free == 0 ? "none" : "")">@(free == 0 ? "нет мест" : $"{free} мест")</div>
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card-x">
+    <div class="card-head">
+        <h2>2. Выберите время</h2>
+        <span class="text-muted small">@Model.Date.ToString("dddd, d MMMM", ru)</span>
+    </div>
+    <div class="card-pad">
+        @if (Model.FreeSlots.Count == 0)
         {
-            <span class="btn btn-outline-secondary disabled">@slot.ToString("HH:mm")</span>
+            <div class="empty py-3"><i class="bi bi-calendar-x"></i>На этот день свободного времени нет. Выберите другой день выше.</div>
+        }
+        else if (!canBook)
+        {
+            <div class="slots">
+                @foreach (var slot in Model.FreeSlots)
+                {
+                    <span class="slot">@slot.ToString("HH:mm")</span>
+                }
+            </div>
+        }
+        else
+        {
+            @foreach (var (title, list) in groups.Where(g => g.Item2.Count > 0))
+            {
+                <div class="slot-group">
+                    <h3>@title</h3>
+                    <div class="slots">
+                        @foreach (var slot in list)
+                        {
+                            <button type="button" class="slot" data-start="@slot.ToString("yyyy-MM-ddTHH:mm")" data-label="@slot.ToString("dddd, d MMMM, HH:mm", ru)">@slot.ToString("HH:mm")</button>
+                        }
+                    </div>
+                </div>
+            }
         }
     </div>
-}
-else
+</div>
+
+@if (canBook && Model.FreeSlots.Count > 0)
 {
-    <form method="post" asp-controller="Appointments" asp-action="@(Model.RescheduleId != null ? "Reschedule" : "Book")">
+    <form id="bookForm" method="post" asp-controller="Appointments" asp-action="@(reschedule ? "Reschedule" : "Book")" class="card-x confirm-bar d-none">
         <input type="hidden" name="doctorId" value="@Model.Doctor.Id" />
-        @if (Model.RescheduleId != null)
+        <input type="hidden" name="start" id="startInput" />
+        @if (reschedule)
         {
             <input type="hidden" name="id" value="@Model.RescheduleId" />
         }
-        @if (staff && Model.RescheduleId == null)
-        {
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Пациент</label>
-                <select name="patientId" class="form-select" required>
-                    <option value="">— выберите пациента —</option>
+        <div>
+            <div class="small text-muted">3. Проверьте и подтвердите</div>
+            <div class="fw-semibold"><span id="slotLabel"></span> · @Model.Doctor.FullName</div>
+        </div>
+        <div class="controls">
+            @if (staff && !reschedule)
+            {
+                <select name="patientId" id="patientSelect" class="form-select" style="min-width:260px" required>
+                    <option value="">Выберите пациента…</option>
                     @foreach (var p in Model.Patients)
                     {
-                        <option value="@p.Id">@p.FullName (@p.Phone)</option>
+                        <option value="@p.Id">@p.FullName@(string.IsNullOrEmpty(p.Phone) ? "" : $" · {p.Phone}")</option>
                     }
                 </select>
-            </div>
-        }
-        <p>Свободное время — нажмите, чтобы @(Model.RescheduleId != null ? "перенести запись" : "записаться"):</p>
-        <div class="d-flex flex-wrap gap-2">
-            @foreach (var slot in Model.FreeSlots)
-            {
-                <button type="submit" name="start" value="@slot.ToString("yyyy-MM-ddTHH:mm")" class="btn btn-outline-primary">@slot.ToString("HH:mm")</button>
             }
+            <button type="submit" id="confirmBtn" class="btn btn-primary btn-lg">
+                <i class="bi bi-check2"></i> @(reschedule ? "Перенести" : "Записаться")
+            </button>
         </div>
     </form>
+}
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.slot[data-start]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.slot.selected').forEach(function (b) { b.classList.remove('selected'); });
+                btn.classList.add('selected');
+                document.getElementById('startInput').value = btn.dataset.start;
+                var label = btn.dataset.label;
+                document.getElementById('slotLabel').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+                var form = document.getElementById('bookForm');
+                form.classList.remove('d-none');
+                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
+    </script>
 }

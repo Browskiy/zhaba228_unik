@@ -31,7 +31,8 @@ public class DoctorsController : AppController
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(d => EF.Functions.ILike(d.FullName, $"%{search.Trim()}%"));
 
-        ViewBag.Specialties = new SelectList(await _db.Specialties.OrderBy(s => s.Name).ToListAsync(), "Id", "Name", specialtyId);
+        ViewBag.SpecialtyList = await _db.Specialties.OrderBy(s => s.Name).ToListAsync();
+        ViewBag.SpecialtyId = specialtyId;
         ViewBag.Search = search;
         return View(await query.OrderBy(d => d.Specialty!.Name).ThenBy(d => d.FullName).ToListAsync());
     }
@@ -51,6 +52,17 @@ public class DoctorsController : AppController
             FreeSlots = doctor.IsActive ? await _schedule.FreeSlotsAsync(doctor, day) : new(),
             RescheduleId = rescheduleId
         };
+
+        DateTime d = DateTime.Today;
+        while (model.Days.Count < 10)
+        {
+            if (d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+                model.Days.Add((d, doctor.IsActive ? (await _schedule.FreeSlotsAsync(doctor, d)).Count : 0));
+            d = d.AddDays(1);
+        }
+
+        if (rescheduleId.HasValue)
+            model.Rescheduling = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == rescheduleId);
 
         if (User.IsInRole("Admin") || User.IsInRole("Registrar"))
             model.Patients = await _db.Users.Where(u => u.Role == UserRole.Patient).OrderBy(u => u.FullName).ToListAsync();
