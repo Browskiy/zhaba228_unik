@@ -1,0 +1,59 @@
+@model List<Appointment>
+@{
+    ViewData["Title"] = "Мои записи";
+    var upcoming = Model.Where(a => a.Status == AppointmentStatus.Scheduled && a.StartTime > DateTime.Now).OrderBy(a => a.StartTime).ToList();
+    var history = Model.Except(upcoming).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Мои записи</h2>
+    <a class="btn btn-primary" asp-controller="Doctors" asp-action="Index">+ Записаться</a>
+</div>
+
+<h5>Предстоящие приёмы</h5>
+@if (upcoming.Count == 0)
+{
+    <p class="text-muted">Запланированных приёмов нет.</p>
+}
+else
+{
+    <table class="table align-middle">
+        <thead class="table-light"><tr><th>Дата и время</th><th>Врач</th><th>Кабинет</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var a in upcoming)
+            {
+                <tr>
+                    <td class="fw-semibold">@a.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
+                    <td>@a.Doctor!.Specialty!.Name — @a.Doctor.FullName</td>
+                    <td>@a.Doctor.Cabinet</td>
+                    <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-primary" asp-controller="Doctors" asp-action="Schedule"
+                           asp-route-id="@a.DoctorId" asp-route-date="@a.StartTime.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@a.Id">Перенести</a>
+                        <form asp-action="Cancel" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Отменить запись?');">
+                            <button class="btn btn-sm btn-outline-danger">Отменить</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h5 class="mt-4">История визитов</h5>
+<table class="table table-sm">
+    <thead class="table-light"><tr><th>Дата и время</th><th>Врач</th><th>Статус</th></tr></thead>
+    <tbody>
+        @foreach (var a in history)
+        {
+            <tr>
+                <td>@a.StartTime.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>@a.Doctor!.Specialty!.Name — @a.Doctor.FullName</td>
+                <td><span class="badge @a.Status.BadgeClass()">@a.Status.ToRussian()</span></td>
+            </tr>
+        }
+        @if (history.Count == 0)
+        {
+            <tr><td colspan="3" class="text-muted">Пока пусто</td></tr>
+        }
+    </tbody>
+</table>

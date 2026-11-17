@@ -1,0 +1,36 @@
+@model List<Appointment>
+@{
+    ViewData["Title"] = "Мои пациенты";
+    DateTime date = ViewBag.Date;
+    Doctor doctor = ViewBag.Doctor;
+}
+
+<h2>Мои пациенты</h2>
+<p class="text-muted">@doctor.FullName · @doctor.Specialty!.Name · кабинет @doctor.Cabinet</p>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <input type="date" name="date" value="@date.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+    </div>
+</form>
+
+<table class="table align-middle">
+    <thead class="table-light"><tr><th>Время</th><th>Пациент</th><th>Дата рождения</th><th>Телефон</th><th>Статус</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var a in Model)
+        {
+            <tr>
+                <td class="fw-semibold">@a.StartTime.ToString("HH:mm")</td>
+                <td>@a.Patient!.FullName</td>
+                <td>@a.Patient.BirthDate?.ToString("dd.MM.yyyy")</td>
+                <td>@a.Patient.Phone</td>
+                <td><span class="badge @a.Status.BadgeClass()">@a.Status.ToRussian()</span></td>
+                <td class="text-end text-nowrap"><partial name="_StatusActions" model="a" /></td>
+            </tr>
+        }
+        @if (Model.Count == 0)
+        {
+            <tr><td colspan="6" class="text-center text-muted">На эту дату пациентов нет</td></tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,80 @@
+@model DoctorScheduleViewModel
+@{
+    ViewData["Title"] = "Расписание врача";
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
+    bool canBook = staff || User.IsInRole("Patient");
+}
+
+<h2>@Model.Doctor.FullName</h2>
+<p class="text-muted">@Model.Doctor.Specialty!.Name · кабинет @Model.Doctor.Cabinet ·
+    приём @Model.Doctor.WorkStart.ToString("HH:mm")–@Model.Doctor.WorkEnd.ToString("HH:mm")</p>
+
+@if (Model.RescheduleId != null)
+{
+    <div class="alert alert-info">Выберите новое время для переноса записи.</div>
+}
+
+<form method="get" class="row g-2 mb-3">
+    <input type="hidden" name="id" value="@Model.Doctor.Id" />
+    @if (Model.RescheduleId != null)
+    {
+        <input type="hidden" name="rescheduleId" value="@Model.RescheduleId" />
+    }
+    <div class="col-auto">
+        <a class="btn btn-outline-secondary" asp-route-id="@Model.Doctor.Id" asp-route-date="@Model.Date.AddDays(-1).ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">←</a>
+    </div>
+    <div class="col-auto">
+        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-outline-secondary" asp-route-id="@Model.Doctor.Id" asp-route-date="@Model.Date.AddDays(1).ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">→</a>
+    </div>
+    <div class="col-auto align-self-center fw-semibold">
+        @Model.Date.ToString("dddd, d MMMM", new System.Globalization.CultureInfo("ru-RU"))
+    </div>
+</form>
+
+@if (Model.FreeSlots.Count == 0)
+{
+    <div class="alert alert-secondary">На эту дату свободного времени нет. Выберите другой день.</div>
+}
+else if (!canBook)
+{
+    <p>Свободное время:</p>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var slot in Model.FreeSlots)
+        {
+            <span class="btn btn-outline-secondary disabled">@slot.ToString("HH:mm")</span>
+        }
+    </div>
+}
+else
+{
+    <form method="post" asp-controller="Appointments" asp-action="@(Model.RescheduleId != null ? "Reschedule" : "Book")">
+        <input type="hidden" name="doctorId" value="@Model.Doctor.Id" />
+        @if (Model.RescheduleId != null)
+        {
+            <input type="hidden" name="id" value="@Model.RescheduleId" />
+        }
+        @if (staff && Model.RescheduleId == null)
+        {
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Пациент</label>
+                <select name="patientId" class="form-select" required>
+                    <option value="">— выберите пациента —</option>
+                    @foreach (var p in Model.Patients)
+                    {
+                        <option value="@p.Id">@p.FullName (@p.Phone)</option>
+                    }
+                </select>
+            </div>
+        }
+        <p>Свободное время — нажмите, чтобы @(Model.RescheduleId != null ? "перенести запись" : "записаться"):</p>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var slot in Model.FreeSlots)
+            {
+                <button type="submit" name="start" value="@slot.ToString("yyyy-MM-ddTHH:mm")" class="btn btn-outline-primary">@slot.ToString("HH:mm")</button>
+            }
+        </div>
+    </form>
+}

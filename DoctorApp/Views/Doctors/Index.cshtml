@@ -1,0 +1,67 @@
+@model List<Doctor>
+@{
+    ViewData["Title"] = "Врачи";
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Врачи</h2>
+    @if (staff)
+    {
+        <a class="btn btn-success" asp-action="Create">+ Добавить врача</a>
+    }
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <select name="specialtyId" class="form-select" asp-items="ViewBag.Specialties">
+            <option value="">Все специальности</option>
+        </select>
+    </div>
+    <div class="col-md-5">
+        <input name="search" value="@ViewBag.Search" class="form-control" placeholder="Поиск по фамилии" />
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-primary w-100">Найти</button>
+    </div>
+</form>
+
+<table class="table table-hover align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Специальность</th>
+            <th>Врач</th>
+            <th>Кабинет</th>
+            <th>Часы приёма</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr class="@(d.IsActive ? "" : "text-muted")">
+                <td>@d.Specialty!.Name</td>
+                <td>@d.FullName @if (!d.IsActive) { <span class="badge bg-secondary">не ведёт приём</span> }</td>
+                <td>@d.Cabinet</td>
+                <td>@d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm"), по @d.SlotMinutes мин</td>
+                <td class="text-end text-nowrap">
+                    @if (d.IsActive)
+                    {
+                        <a class="btn btn-sm btn-primary" asp-action="Schedule" asp-route-id="@d.Id">Расписание и запись</a>
+                    }
+                    @if (staff)
+                    {
+                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@d.Id">Изменить</a>
+                        <form asp-action="Delete" asp-route-id="@d.Id" method="post" class="d-inline" onsubmit="return confirm('Удалить врача @d.FullName?');">
+                            <button class="btn btn-sm btn-outline-danger">Удалить</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        @if (Model.Count == 0)
+        {
+            <tr><td colspan="5" class="text-center text-muted">Врачи не найдены</td></tr>
+        }
+    </tbody>
+</table>

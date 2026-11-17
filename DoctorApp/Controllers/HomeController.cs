@@ -1,32 +1,48 @@
+using System.Diagnostics;
+using DoctorApp.Data;
 using DoctorApp.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
-namespace DoctorApp.Controllers
+namespace DoctorApp.Controllers;
+
+public class HomeController : AppController
 {
-    public class HomeController : Controller
+    private readonly AppDbContext _db;
+
+    public HomeController(AppDbContext db)
     {
-        private readonly ILogger<HomeController> _logger;
+        _db = db;
+    }
 
-        public HomeController(ILogger<HomeController> logger)
+    public async Task<IActionResult> Index()
+    {
+        ViewBag.DoctorCount = await _db.Doctors.CountAsync(d => d.IsActive);
+        ViewBag.SpecialtyCount = await _db.Specialties.CountAsync();
+
+        if (User.Identity?.IsAuthenticated == true && User.IsInRole(nameof(UserRole.Patient)))
         {
-            _logger = logger;
+            int id = CurrentUserId;
+            ViewBag.Next = await _db.Appointments
+                .Include(a => a.Doctor).ThenInclude(d => d!.Specialty)
+                .Where(a => a.PatientId == id && a.Status == AppointmentStatus.Scheduled && a.StartTime > DateTime.Now)
+                .OrderBy(a => a.StartTime)
+                .FirstOrDefaultAsync();
         }
 
-        public IActionResult Index()
+        if (User.Identity?.IsAuthenticated == true && !User.IsInRole(nameof(UserRole.Patient)))
         {
-            return View();
+            DateTime today = DateTime.Today;
+            ViewBag.TodayCount = await _db.Appointments
+                .CountAsync(a => a.StartTime >= today && a.StartTime < today.AddDays(1) && a.Status != AppointmentStatus.Cancelled);
         }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
+        return View();
+    }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

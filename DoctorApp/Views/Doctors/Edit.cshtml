@@ -1,0 +1,57 @@
+@model Doctor
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Новый врач" : "Изменение врача";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Save" method="post" class="col-md-8">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="mb-3">
+        <label asp-for="FullName" class="form-label"></label>
+        <input asp-for="FullName" class="form-control" />
+        <span asp-validation-for="FullName" class="text-danger small"></span>
+    </div>
+    <div class="row">
+        <div class="col-md-8 mb-3">
+            <label asp-for="SpecialtyId" class="form-label"></label>
+            <select asp-for="SpecialtyId" class="form-select" asp-items="ViewBag.Specialties"></select>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="Cabinet" class="form-label"></label>
+            <input asp-for="Cabinet" class="form-control" />
+            <span asp-validation-for="Cabinet" class="text-danger small"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="WorkStart" class="form-label"></label>
+            <input asp-for="WorkStart" type="time" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="WorkEnd" class="form-label"></label>
+            <input asp-for="WorkEnd" type="time" class="form-control" />
+            <span asp-validation-for="WorkEnd" class="text-danger small"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="SlotMinutes" class="form-label"></label>
+            <input asp-for="SlotMinutes" class="form-control" />
+            <span asp-validation-for="SlotMinutes" class="text-danger small"></span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="UserId" class="form-label"></label>
+        <select asp-for="UserId" class="form-select" asp-items="ViewBag.DoctorUsers">
+            <option value="">— не привязана —</option>
+        </select>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="IsActive" class="form-check-input" />
+        <label asp-for="IsActive" class="form-check-label"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a asp-action="Index" class="btn btn-link">Отмена</a>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

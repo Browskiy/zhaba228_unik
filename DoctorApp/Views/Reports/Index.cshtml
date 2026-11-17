@@ -1,0 +1,58 @@
+@model ReportViewModel
+@{
+    ViewData["Title"] = "Отчёты";
+    int max = Model.ByDay.Count == 0 ? 1 : Model.ByDay.Max(d => d.Count);
+}
+
+<h2>Отчёт по записям</h2>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-auto"><label class="col-form-label">с</label></div>
+    <div class="col-md-3"><input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-auto"><label class="col-form-label">по</label></div>
+    <div class="col-md-3"><input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="col-auto"><button class="btn btn-primary">Сформировать</button></div>
+    <div class="col-auto">
+        <a class="btn btn-outline-success" asp-action="Csv" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")">Скачать CSV</a>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Всего записей</div><div class="fs-3">@Model.Total.Total</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Проведено</div><div class="fs-3 text-success">@Model.Total.Completed</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Отменено</div><div class="fs-3 text-secondary">@Model.Total.Cancelled</div></div></div></div>
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body"><div class="text-muted small">Неявки</div><div class="fs-3 text-danger">@Model.Total.NoShow</div></div></div></div>
+</div>
+
+<h5>По врачам</h5>
+<table class="table table-sm">
+    <thead class="table-light"><tr><th>Врач</th><th>Всего</th><th>Запланировано</th><th>Проведено</th><th>Отменено</th><th>Неявки</th></tr></thead>
+    <tbody>
+        @foreach (var r in Model.ByDoctor)
+        {
+            <tr><td>@r.Name</td><td>@r.Total</td><td>@r.Scheduled</td><td>@r.Completed</td><td>@r.Cancelled</td><td>@r.NoShow</td></tr>
+        }
+    </tbody>
+</table>
+
+<h5 class="mt-4">По специальностям</h5>
+<table class="table table-sm">
+    <thead class="table-light"><tr><th>Специальность</th><th>Всего</th><th>Проведено</th><th>Неявки</th><th>Доля неявок</th></tr></thead>
+    <tbody>
+        @foreach (var r in Model.BySpecialty)
+        {
+            int done = r.Completed + r.NoShow;
+            <tr><td>@r.Name</td><td>@r.Total</td><td>@r.Completed</td><td>@r.NoShow</td><td>@(done == 0 ? "—" : $"{100.0 * r.NoShow / done:0}%")</td></tr>
+        }
+    </tbody>
+</table>
+
+<h5 class="mt-4">Загрузка по дням</h5>
+@foreach (var d in Model.ByDay)
+{
+    <div class="d-flex align-items-center mb-1">
+        <div style="width:90px" class="small">@d.Day.ToString("dd.MM ddd", new System.Globalization.CultureInfo("ru-RU"))</div>
+        <div class="bg-primary rounded" style="height:14px;width:@(Math.Max(1, 70.0 * d.Count / max).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+        <div class="small ms-2">@d.Count</div>
+    </div>
+}
