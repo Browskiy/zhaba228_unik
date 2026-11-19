@@ -78,3 +78,43 @@ public class ReportViewModel
     public ReportRow Total { get; set; } = new();
     public List<(DateTime Day, int Count)> ByDay { get; set; } = new();
 }
+
+public class ProfileViewModel
+{
+    [Required(ErrorMessage = "Введите ФИО")]
+    [MaxLength(150)]
+    [Display(Name = "ФИО")]
+    public string FullName { get; set; } = "";
+
+    [Phone(ErrorMessage = "Некорректный телефон")]
+    [Display(Name = "Телефон")]
+    public string? Phone { get; set; }
+}
+
+public class ChangePasswordViewModel
+{
+    [Required(ErrorMessage = "Введите текущий пароль")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Текущий пароль")]
+    public string CurrentPassword { get; set; } = "";
+
+    [Required(ErrorMessage = "Введите новый пароль")]
+    [MinLength(6, ErrorMessage = "Не менее 6 символов")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Новый пароль")]
+    public string NewPassword { get; set; } = "";
+
+    [Compare(nameof(NewPassword), ErrorMessage = "Пароли не совпадают")]
+    [DataType(DataType.Password)]
+    [Display(Name = "Повтор нового пароля")]
+    public string ConfirmPassword { get; set; } = "";
+}
+
+public class ProfilePageViewModel
+{
+    public ProfileViewModel Info { get; set; } = new();
+    public ChangePasswordViewModel Password { get; set; } = new();
+    public string Login { get; set; } = "";
+    public UserRole Role { get; set; }
+    public string? AvatarPath { get; set; }
+}

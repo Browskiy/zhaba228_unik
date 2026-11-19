@@ -36,6 +36,9 @@ public class User
 
     public DateTime? BirthDate { get; set; }
 
+    [MaxLength(255)]
+    public string? AvatarPath { get; set; }
+
     public UserRole Role { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.Now;

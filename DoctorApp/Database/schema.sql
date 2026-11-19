@@ -11,6 +11,7 @@ CREATE TABLE users (
     "FullName" character varying(150) NOT NULL,
     "Phone" character varying(20),
     "BirthDate" timestamp without time zone,
+    "AvatarPath" character varying(255),
     "Role" integer NOT NULL,
     "CreatedAt" timestamp without time zone NOT NULL,
     CONSTRAINT "PK_users" PRIMARY KEY ("Id")

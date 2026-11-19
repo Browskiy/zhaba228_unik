@@ -35,6 +35,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     db.Database.EnsureCreated();
+    db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS \"AvatarPath\" character varying(255)");
     DbSeeder.Seed(db);
 }
 

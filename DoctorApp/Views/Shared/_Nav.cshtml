@@ -41,6 +41,7 @@
     }
 
     <div class="nav-section">Прочее</div>
+    <a class="@Active("Account", "Profile")" asp-controller="Account" asp-action="Profile"><i class="bi bi-person-gear"></i> Личный кабинет</a>
     <a class="@Active("Notifications")" asp-controller="Notifications" asp-action="Index">
         <i class="bi bi-bell"></i> Уведомления
         @if (unread > 0)

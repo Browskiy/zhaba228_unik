@@ -2,6 +2,7 @@
     bool auth = User.Identity?.IsAuthenticated == true;
     string roleName = User.IsInRole("Admin") ? "Администратор" : User.IsInRole("Registrar") ? "Регистратор" : User.IsInRole("Doctor") ? "Врач" : "Пациент";
     string userName = User.Identity?.Name ?? "";
+    string? avatarPath = User.FindFirst("AvatarPath")?.Value;
 }
 <!DOCTYPE html>
 <html lang="ru">
@@ -24,7 +25,10 @@
                 </a>
                 <partial name="_Nav" />
                 <div class="user-card">
-                    <div class="avatar sm @userName.AvatarClass()">@userName.Initials()</div>
+                    <div class="avatar sm @userName.AvatarClass()">
+                        @if (avatarPath != null) { <img src="@avatarPath" alt="" class="avatar-img" /> }
+                        else { @userName.Initials() }
+                    </div>
                     <div class="flex-grow-1 overflow-hidden">
                         <div class="name text-truncate">@userName</div>
                         <div class="role">@roleName</div>

@@ -1,0 +1,94 @@
+@using DoctorApp.Models
+@model ProfilePageViewModel
+@{
+    ViewData["Title"] = "Личный кабинет";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Личный кабинет</h1>
+        <p>Личные данные, фото и пароль</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-x text-center">
+            <div class="avatar-big @Model.Info.FullName.AvatarClass()">
+                @if (Model.AvatarPath != null)
+                {
+                    <img src="@Model.AvatarPath" alt="Фото профиля" />
+                }
+                else
+                {
+                    @Model.Info.FullName.Initials()
+                }
+            </div>
+            <div class="fw-semibold mt-3">@Model.Info.FullName</div>
+            <div class="text-muted small">@Model.Role.ToRussian() · логин: @Model.Login</div>
+
+            <hr class="my-3" />
+
+            <form asp-action="UploadAvatar" method="post" enctype="multipart/form-data">
+                <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="form-control form-control-sm mb-2" required />
+                <button type="submit" class="btn btn-primary btn-sm w-100">Загрузить фото</button>
+            </form>
+
+            @if (Model.AvatarPath != null)
+            {
+                <form asp-action="RemoveAvatar" method="post" class="mt-2">
+                    <button type="submit" class="btn btn-light btn-sm w-100">Удалить фото</button>
+                </form>
+            }
+
+            <p class="text-muted small mt-2 mb-0">JPG, PNG или WEBP, не более 2 МБ</p>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card-x mb-4">
+            <h2 class="h5 fw-bold mb-3">Личные данные</h2>
+            <form asp-action="UpdateProfile" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+                <div class="mb-3">
+                    <label asp-for="Info.FullName" class="form-label"></label>
+                    <input asp-for="Info.FullName" class="form-control" />
+                    <span asp-validation-for="Info.FullName" class="text-danger small"></span>
+                </div>
+                <div class="mb-4">
+                    <label asp-for="Info.Phone" class="form-label"></label>
+                    <input asp-for="Info.Phone" class="form-control" placeholder="+7 900 000-00-00" />
+                    <span asp-validation-for="Info.Phone" class="text-danger small"></span>
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить данные</button>
+            </form>
+        </div>
+
+        <div class="card-x">
+            <h2 class="h5 fw-bold mb-3">Смена пароля</h2>
+            <form asp-action="ChangePassword" method="post" autocomplete="off">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+                <div class="mb-3">
+                    <label asp-for="Password.CurrentPassword" class="form-label"></label>
+                    <input asp-for="Password.CurrentPassword" class="form-control" autocomplete="current-password" />
+                    <span asp-validation-for="Password.CurrentPassword" class="text-danger small"></span>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Password.NewPassword" class="form-label"></label>
+                        <input asp-for="Password.NewPassword" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Password.NewPassword" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <label asp-for="Password.ConfirmPassword" class="form-label"></label>
+                        <input asp-for="Password.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Password.ConfirmPassword" class="text-danger small"></span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Изменить пароль</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
