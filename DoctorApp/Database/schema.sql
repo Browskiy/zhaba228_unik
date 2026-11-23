@@ -59,6 +59,8 @@ CREATE UNIQUE INDEX "IX_appointments_DoctorId_StartTime" ON appointments ("Docto
 
 CREATE INDEX "IX_appointments_PatientId" ON appointments ("PatientId");
 
+CREATE INDEX "IX_appointments_StartTime" ON appointments ("StartTime");
+
 CREATE INDEX "IX_doctors_SpecialtyId" ON doctors ("SpecialtyId");
 
 CREATE INDEX "IX_doctors_UserId" ON doctors ("UserId");

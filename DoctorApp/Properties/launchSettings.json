@@ -18,6 +18,13 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "bench": {
+      "commandName": "Project",
+      "commandLineArgs": "--bench",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,

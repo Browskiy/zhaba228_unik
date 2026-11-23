@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using DoctorApp.Data;
 using DoctorApp.Models;
 using DoctorApp.Services;
@@ -13,16 +14,18 @@ public class DoctorsController : AppController
     private const string Staff = "Admin,Registrar";
     private readonly AppDbContext _db;
     private readonly ScheduleService _schedule;
+    private readonly ILogger<DoctorsController> _logger;
 
-    public DoctorsController(AppDbContext db, ScheduleService schedule)
+    public DoctorsController(AppDbContext db, ScheduleService schedule, ILogger<DoctorsController> logger)
     {
         _db = db;
         _schedule = schedule;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index(int? specialtyId, string? search)
     {
-        var query = _db.Doctors.Include(d => d.Specialty).AsQueryable();
+        var query = _db.Doctors.AsNoTracking().Include(d => d.Specialty).AsQueryable();
 
         if (!User.IsInRole("Admin") && !User.IsInRole("Registrar"))
             query = query.Where(d => d.IsActive);
@@ -31,7 +34,7 @@ public class DoctorsController : AppController
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(d => EF.Functions.ILike(d.FullName, $"%{search.Trim()}%"));
 
-        ViewBag.SpecialtyList = await _db.Specialties.OrderBy(s => s.Name).ToListAsync();
+        ViewBag.SpecialtyList = await _db.Specialties.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
         ViewBag.SpecialtyId = specialtyId;
         ViewBag.Search = search;
         return View(await query.OrderBy(d => d.Specialty!.Name).ThenBy(d => d.FullName).ToListAsync());
@@ -40,7 +43,8 @@ public class DoctorsController : AppController
     [Authorize]
     public async Task<IActionResult> Schedule(int id, DateTime? date, int? rescheduleId)
     {
-        var doctor = await _db.Doctors.Include(d => d.Specialty).FirstOrDefaultAsync(d => d.Id == id);
+        var timer = Stopwatch.StartNew();
+        var doctor = await _db.Doctors.AsNoTracking().Include(d => d.Specialty).FirstOrDefaultAsync(d => d.Id == id);
         if (doctor == null)
             return NotFound();
 
@@ -53,20 +57,15 @@ public class DoctorsController : AppController
             RescheduleId = rescheduleId
         };
 
-        DateTime d = DateTime.Today;
-        while (model.Days.Count < 10)
-        {
-            if (d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
-                model.Days.Add((d, doctor.IsActive ? (await _schedule.FreeSlotsAsync(doctor, d)).Count : 0));
-            d = d.AddDays(1);
-        }
+        model.Days = await _schedule.FreeCountsAsync(doctor, 10);
 
         if (rescheduleId.HasValue)
-            model.Rescheduling = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == rescheduleId);
+            model.Rescheduling = await _db.Appointments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == rescheduleId);
 
         if (User.IsInRole("Admin") || User.IsInRole("Registrar"))
-            model.Patients = await _db.Users.Where(u => u.Role == UserRole.Patient).OrderBy(u => u.FullName).ToListAsync();
+            model.Patients = await _db.Users.AsNoTracking().Where(u => u.Role == UserRole.Patient).OrderBy(u => u.FullName).ToListAsync();
 
+        _logger.LogInformation("Расписание врача {DoctorId} на {Date:dd.MM.yyyy} построено за {Elapsed} мс", id, day, timer.ElapsedMilliseconds);
         return View(model);
     }
 

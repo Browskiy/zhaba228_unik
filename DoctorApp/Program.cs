@@ -1,4 +1,5 @@
 using DoctorApp.Data;
+using DoctorApp.Diagnostics;
 using DoctorApp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -7,11 +8,18 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (args.Contains("--bench"))
+{
+    await PerformanceBenchmark.RunAsync(builder.Configuration.GetConnectionString("DefaultConnection")!);
+    return;
+}
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ReportService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -36,6 +44,7 @@ using (var scope = app.Services.CreateScope())
 
     db.Database.EnsureCreated();
     db.Database.ExecuteSqlRaw("ALTER TABLE users ADD COLUMN IF NOT EXISTS \"AvatarPath\" character varying(255)");
+    db.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS \"IX_appointments_StartTime\" ON appointments (\"StartTime\")");
     DbSeeder.Seed(db);
 }
 

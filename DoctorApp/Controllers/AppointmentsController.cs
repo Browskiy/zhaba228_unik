@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace DoctorApp.Controllers;
 
@@ -15,12 +16,14 @@ public class AppointmentsController : AppController
     private readonly AppDbContext _db;
     private readonly ScheduleService _schedule;
     private readonly NotificationService _notifications;
+    private readonly ILogger<AppointmentsController> _logger;
 
-    public AppointmentsController(AppDbContext db, ScheduleService schedule, NotificationService notifications)
+    public AppointmentsController(AppDbContext db, ScheduleService schedule, NotificationService notifications, ILogger<AppointmentsController> logger)
     {
         _db = db;
         _schedule = schedule;
         _notifications = notifications;
+        _logger = logger;
     }
 
     private bool IsStaff => User.IsInRole("Admin") || User.IsInRole("Registrar");
@@ -32,18 +35,27 @@ public class AppointmentsController : AppController
         if (doctor == null)
             return NotFound();
 
-        int patient = IsStaff && patientId.HasValue ? patientId.Value : CurrentUserId;
         if (!IsStaff && !User.IsInRole("Patient"))
             return Forbid();
 
+        int patient = IsStaff ? patientId ?? 0 : CurrentUserId;
+        if (!await PatientExistsAsync(patient))
+        {
+            _logger.LogWarning("Запись отклонена: пациент {PatientId} не найден", patient);
+            Error("Выберите пациента из списка.");
+            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
+        }
+
         if (!await _schedule.IsSlotFreeAsync(doctor, start))
         {
+            _logger.LogInformation("Запись отклонена: время {Start} врача {DoctorId} занято или недоступно", start, doctorId);
             Error("Это время уже занято или недоступно. Выберите другое.");
             return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
         }
 
-        if (await _db.Appointments.AnyAsync(a => a.PatientId == patient && a.StartTime == start && a.Status == AppointmentStatus.Scheduled))
+        if (await PatientBusyAsync(patient, start, null))
         {
+            _logger.LogInformation("Запись отклонена: у пациента {PatientId} уже есть запись на {Start}", patient, start);
             Error("У пациента уже есть запись на это время к другому врачу.");
             return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
         }
@@ -54,6 +66,7 @@ public class AppointmentsController : AppController
         if (!await TrySaveAsync())
             return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
 
+        _logger.LogInformation("Создана запись на {Start} к врачу {DoctorId} для пациента {PatientId}", start, doctorId, patient);
         Success($"Запись на {start:dd.MM.yyyy HH:mm} оформлена");
         return IsStaff ? RedirectToAction(nameof(All), new { date = start.Date }) : RedirectToAction(nameof(My));
     }
@@ -62,6 +75,7 @@ public class AppointmentsController : AppController
     {
         int id = CurrentUserId;
         var list = await _db.Appointments
+            .AsNoTracking()
             .Include(a => a.Doctor).ThenInclude(d => d!.Specialty)
             .Where(a => a.PatientId == id)
             .OrderByDescending(a => a.StartTime)
@@ -86,6 +100,7 @@ public class AppointmentsController : AppController
         a.Status = AppointmentStatus.Cancelled;
         _notifications.Add(a.PatientId, $"Запись на {a.StartTime:dd.MM.yyyy HH:mm} к врачу {a.Doctor!.FullName} отменена.");
         await _db.SaveChangesAsync();
+        _logger.LogInformation("Запись {AppointmentId} отменена пользователем {UserId}", a.Id, CurrentUserId);
         Success("Запись отменена");
         return Back();
     }
@@ -100,7 +115,15 @@ public class AppointmentsController : AppController
             return Forbid();
         if (a.Status != AppointmentStatus.Scheduled || !await _schedule.IsSlotFreeAsync(a.Doctor!, start, a.Id))
         {
+            _logger.LogInformation("Перенос записи {AppointmentId} на {Start} отклонён: время недоступно", id, start);
             Error("Перенести запись на это время нельзя");
+            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
+        }
+
+        if (await PatientBusyAsync(a.PatientId, start, a.Id))
+        {
+            _logger.LogInformation("Перенос записи {AppointmentId} отклонён: у пациента уже есть запись на {Start}", id, start);
+            Error("У пациента уже есть запись на это время к другому врачу.");
             return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
         }
 
@@ -111,6 +134,7 @@ public class AppointmentsController : AppController
         if (!await TrySaveAsync())
             return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
 
+        _logger.LogInformation("Запись {AppointmentId} перенесена с {Old} на {Start}", id, old, start);
         Success($"Запись перенесена на {start:dd.MM.yyyy HH:mm}");
         return IsStaff ? RedirectToAction(nameof(All), new { date = start.Date }) : RedirectToAction(nameof(My));
     }
@@ -120,6 +144,7 @@ public class AppointmentsController : AppController
     {
         DateTime day = (date ?? DateTime.Today).Date;
         var query = _db.Appointments
+            .AsNoTracking()
             .Include(a => a.Doctor).ThenInclude(d => d!.Specialty)
             .Include(a => a.Patient)
             .Where(a => a.StartTime >= day && a.StartTime < day.AddDays(1));
@@ -127,7 +152,7 @@ public class AppointmentsController : AppController
             query = query.Where(a => a.DoctorId == doctorId);
 
         ViewBag.Date = day;
-        ViewBag.Doctors = new SelectList(await _db.Doctors.OrderBy(d => d.FullName).ToListAsync(), "Id", "FullName", doctorId);
+        ViewBag.Doctors = new SelectList(await _db.Doctors.AsNoTracking().OrderBy(d => d.FullName).ToListAsync(), "Id", "FullName", doctorId);
         return View(await query.OrderBy(a => a.StartTime).ThenBy(a => a.Doctor!.FullName).ToListAsync());
     }
 
@@ -146,6 +171,7 @@ public class AppointmentsController : AppController
         ViewBag.Date = day;
         ViewBag.Doctor = doctor;
         var list = await _db.Appointments
+            .AsNoTracking()
             .Include(a => a.Patient)
             .Where(a => a.DoctorId == doctor.Id && a.StartTime >= day && a.StartTime < day.AddDays(1) && a.Status != AppointmentStatus.Cancelled)
             .OrderBy(a => a.StartTime)
@@ -161,13 +187,17 @@ public class AppointmentsController : AppController
             return NotFound();
         if (User.IsInRole("Doctor") && a.Doctor!.UserId != CurrentUserId)
             return Forbid();
-        if (status == AppointmentStatus.Scheduled)
+        if (!Enum.IsDefined(status) || status == AppointmentStatus.Scheduled)
+        {
+            _logger.LogWarning("Недопустимый статус {Status} для записи {AppointmentId}", status, id);
             return BadRequest();
+        }
 
         a.Status = status;
         if (status == AppointmentStatus.NoShow)
             _notifications.Add(a.PatientId, $"Отмечена неявка на приём {a.StartTime:dd.MM.yyyy HH:mm}. Если вы не можете прийти, отменяйте запись заранее.");
         await _db.SaveChangesAsync();
+        _logger.LogInformation("Статус записи {AppointmentId} изменён на {Status}", id, status);
         Success($"Статус записи изменён: {status.ToRussian()}");
         return Back();
     }
@@ -184,11 +214,32 @@ public class AppointmentsController : AppController
             await _db.SaveChangesAsync();
             return true;
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
+            _logger.LogWarning(ex, "Конфликт записи: время уже занято другим пациентом");
             Error("Это время только что заняли. Выберите другое.");
             return false;
         }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Не удалось сохранить запись");
+            Error("Не удалось сохранить запись. Попробуйте позже.");
+            return false;
+        }
+    }
+
+    private Task<bool> PatientExistsAsync(int patientId)
+    {
+        return _db.Users.AnyAsync(u => u.Id == patientId && u.Role == UserRole.Patient);
+    }
+
+    private Task<bool> PatientBusyAsync(int patientId, DateTime start, int? ignoreAppointmentId)
+    {
+        return _db.Appointments.AnyAsync(x =>
+            x.PatientId == patientId
+            && x.StartTime == start
+            && x.Status == AppointmentStatus.Scheduled
+            && x.Id != ignoreAppointmentId);
     }
 
     private IActionResult Back()

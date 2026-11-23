@@ -24,17 +24,29 @@ public class NotificationService
         DateTime limit = now.AddHours(24);
 
         var upcoming = await _db.Appointments
+            .AsNoTracking()
             .Include(a => a.Doctor).ThenInclude(d => d!.Specialty)
             .Where(a => a.PatientId == userId
                         && a.Status == AppointmentStatus.Scheduled
                         && a.StartTime > now && a.StartTime <= limit)
             .ToListAsync();
 
-        foreach (var a in upcoming)
+        if (upcoming.Count == 0)
+            return;
+
+        var texts = upcoming
+            .Select(a => $"Напоминание: приём {a.StartTime:dd.MM.yyyy HH:mm}, {a.Doctor!.Specialty!.Name.ToLower()} {a.Doctor.FullName}, кабинет {a.Doctor.Cabinet}.")
+            .ToList();
+
+        var existing = await _db.Notifications
+            .Where(n => n.UserId == userId && texts.Contains(n.Text))
+            .Select(n => n.Text)
+            .ToListAsync();
+
+        var known = new HashSet<string>(existing);
+        foreach (string text in texts)
         {
-            string text = $"Напоминание: приём {a.StartTime:dd.MM.yyyy HH:mm}, {a.Doctor!.Specialty!.Name.ToLower()} {a.Doctor.FullName}, кабинет {a.Doctor.Cabinet}.";
-            bool exists = await _db.Notifications.AnyAsync(n => n.UserId == userId && n.Text == text);
-            if (!exists)
+            if (known.Add(text))
                 Add(userId, text);
         }
 

@@ -42,6 +42,7 @@ public class AppDbContext : DbContext
             .HasIndex(a => new { a.DoctorId, a.StartTime })
             .IsUnique()
             .HasFilter("\"Status\" = 0");
+        b.Entity<Appointment>().HasIndex(a => a.StartTime);
 
         b.Entity<Notification>().ToTable("notifications");
         b.Entity<Notification>()
