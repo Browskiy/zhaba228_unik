@@ -13,8 +13,8 @@
 
 <div class="row g-4">
     <div class="col-lg-4">
-        <div class="card-x text-center">
-            <div class="avatar-big @Model.Info.FullName.AvatarClass()">
+        <div class="card-x card-pad text-center">
+            <div class="avatar-big">
                 @if (Model.AvatarPath != null)
                 {
                     <img src="@Model.AvatarPath" alt="Фото профиля" />
@@ -24,20 +24,20 @@
                     @Model.Info.FullName.Initials()
                 }
             </div>
-            <div class="fw-semibold mt-3">@Model.Info.FullName</div>
-            <div class="text-muted small">@Model.Role.ToRussian() · логин: @Model.Login</div>
+            <div class="fw-medium mt-3">@Model.Info.FullName</div>
+            <div class="text-muted small">@Model.Role.ToRussian(), логин @Model.Login</div>
 
             <hr class="my-3" />
 
             <form asp-action="UploadAvatar" method="post" enctype="multipart/form-data">
                 <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="form-control form-control-sm mb-2" required />
-                <button type="submit" class="btn btn-primary btn-sm w-100">Загрузить фото</button>
+                <button type="submit" class="btn btn-light btn-sm w-100">Загрузить фото</button>
             </form>
 
             @if (Model.AvatarPath != null)
             {
                 <form asp-action="RemoveAvatar" method="post" class="mt-2">
-                    <button type="submit" class="btn btn-light btn-sm w-100">Удалить фото</button>
+                    <button type="submit" class="btn btn-quiet danger btn-sm w-100">Удалить фото</button>
                 </form>
             }
 
@@ -46,8 +46,8 @@
     </div>
 
     <div class="col-lg-8">
-        <div class="card-x mb-4">
-            <h2 class="h5 fw-bold mb-3">Личные данные</h2>
+        <div class="card-x card-pad mb-4">
+            <h2 class="form-title">Личные данные</h2>
             <form asp-action="UpdateProfile" method="post">
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
                 <div class="mb-3">
@@ -64,8 +64,8 @@
             </form>
         </div>
 
-        <div class="card-x">
-            <h2 class="h5 fw-bold mb-3">Смена пароля</h2>
+        <div class="card-x card-pad">
+            <h2 class="form-title">Смена пароля</h2>
             <form asp-action="ChangePassword" method="post" autocomplete="off">
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
                 <div class="mb-3">
@@ -85,7 +85,7 @@
                         <span asp-validation-for="Password.ConfirmPassword" class="text-danger small"></span>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Изменить пароль</button>
+                <button type="submit" class="btn btn-light">Изменить пароль</button>
             </form>
         </div>
     </div>

@@ -2,12 +2,12 @@
 
 @if (Model.Status == AppointmentStatus.Scheduled)
 {
-    <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post" class="d-inline">
+    <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post">
         <input type="hidden" name="status" value="@AppointmentStatus.Completed" />
-        <button class="btn btn-sm btn-soft" title="Пациент пришёл, приём проведён"><i class="bi bi-check2"></i> Пришёл</button>
+        <button class="btn btn-sm btn-light" title="Пациент пришёл, приём проведён"><i class="bi bi-check2"></i> Пришёл</button>
     </form>
-    <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post" class="d-inline">
+    <form asp-controller="Appointments" asp-action="SetStatus" asp-route-id="@Model.Id" method="post">
         <input type="hidden" name="status" value="@AppointmentStatus.NoShow" />
-        <button class="btn btn-sm btn-light text-danger" title="Пациент не пришёл"><i class="bi bi-person-x"></i> Не пришёл</button>
+        <button class="btn btn-sm btn-quiet danger" title="Пациент не пришёл">Не пришёл</button>
     </form>
 }

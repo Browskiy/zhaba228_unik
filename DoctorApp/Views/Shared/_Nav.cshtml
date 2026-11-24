@@ -37,11 +37,11 @@
     @if (User.IsInRole("Admin"))
     {
         <div class="nav-section">Администрирование</div>
-        <a class="@Active("Users")" asp-controller="Users" asp-action="Index"><i class="bi bi-people-fill"></i> Пользователи</a>
+        <a class="@Active("Users")" asp-controller="Users" asp-action="Index"><i class="bi bi-people"></i> Пользователи</a>
     }
 
     <div class="nav-section">Прочее</div>
-    <a class="@Active("Account", "Profile")" asp-controller="Account" asp-action="Profile"><i class="bi bi-person-gear"></i> Личный кабинет</a>
+    <a class="@Active("Account", "Profile")" asp-controller="Account" asp-action="Profile"><i class="bi bi-person"></i> Личный кабинет</a>
     <a class="@Active("Notifications")" asp-controller="Notifications" asp-action="Index">
         <i class="bi bi-bell"></i> Уведомления
         @if (unread > 0)

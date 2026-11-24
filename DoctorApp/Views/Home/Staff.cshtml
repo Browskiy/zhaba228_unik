@@ -11,39 +11,35 @@
     <a class="btn btn-primary" asp-controller="Doctors" asp-action="Index"><i class="bi bi-plus-lg"></i> Записать пациента</a>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3"><div class="card-x stat"><div class="label"><i class="bi bi-calendar-event"></i> Записей сегодня</div><div class="value">@ViewBag.TodayTotal</div></div></div>
-    <div class="col-6 col-lg-3"><div class="card-x stat"><div class="label"><i class="bi bi-clock"></i> Ожидают приёма</div><div class="value" style="color:#0369a1">@ViewBag.TodayScheduled</div></div></div>
-    <div class="col-6 col-lg-3"><div class="card-x stat"><div class="label"><i class="bi bi-check2-circle"></i> Проведено</div><div class="value text-success">@ViewBag.TodayCompleted</div></div></div>
-    <div class="col-6 col-lg-3"><div class="card-x stat"><div class="label"><i class="bi bi-person-x"></i> Неявки</div><div class="value text-danger">@ViewBag.TodayNoShow</div></div></div>
+<div class="card-x stats mb-4">
+    <div class="stat"><div class="label">Записей сегодня</div><div class="value">@ViewBag.TodayTotal</div></div>
+    <div class="stat"><div class="label">Ожидают приёма</div><div class="value">@ViewBag.TodayScheduled</div></div>
+    <div class="stat"><div class="label">Проведено</div><div class="value">@ViewBag.TodayCompleted</div></div>
+    <div class="stat"><div class="label">Неявки</div><div class="value">@ViewBag.TodayNoShow</div></div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-6 col-xl-4">
-        <a class="card-x tile primary" asp-controller="Appointments" asp-action="All">
-            <div class="tile-icon"><i class="bi bi-journal-medical"></i></div>
-            <div><h3>Журнал записей</h3><p>Кто записан на сегодня, отметки о приёме</p></div>
-        </a>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <a class="card-x tile" asp-controller="Doctors" asp-action="Index">
-            <div class="tile-icon"><i class="bi bi-person-badge"></i></div>
-            <div><h3>Врачи и запись</h3><p>Записать пациента, карточки врачей (@ViewBag.DoctorCount)</p></div>
-        </a>
-    </div>
-    <div class="col-md-6 col-xl-4">
-        <a class="card-x tile" asp-controller="Reports" asp-action="Index">
-            <div class="tile-icon"><i class="bi bi-bar-chart-line"></i></div>
-            <div><h3>Отчёты</h3><p>Загрузка врачей, неявки, выгрузка CSV</p></div>
-        </a>
-    </div>
+<div class="card-x links">
+    <a class="link-row" asp-controller="Appointments" asp-action="All">
+        <i class="bi bi-journal-medical"></i>
+        <div><h3>Журнал записей</h3><p>Кто записан на сегодня, отметки о приёме</p></div>
+        <i class="bi bi-chevron-right"></i>
+    </a>
+    <a class="link-row" asp-controller="Doctors" asp-action="Index">
+        <i class="bi bi-person-badge"></i>
+        <div><h3>Врачи и запись</h3><p>Записать пациента, карточки врачей (@ViewBag.DoctorCount)</p></div>
+        <i class="bi bi-chevron-right"></i>
+    </a>
+    <a class="link-row" asp-controller="Reports" asp-action="Index">
+        <i class="bi bi-bar-chart-line"></i>
+        <div><h3>Отчёты</h3><p>Загрузка врачей, неявки, выгрузка CSV</p></div>
+        <i class="bi bi-chevron-right"></i>
+    </a>
     @if (User.IsInRole("Admin"))
     {
-        <div class="col-md-6 col-xl-4">
-            <a class="card-x tile" asp-controller="Users" asp-action="Index">
-                <div class="tile-icon"><i class="bi bi-people-fill"></i></div>
-                <div><h3>Пользователи</h3><p>Роли и доступ сотрудников</p></div>
-            </a>
-        </div>
+        <a class="link-row" asp-controller="Users" asp-action="Index">
+            <i class="bi bi-people"></i>
+            <div><h3>Пользователи</h3><p>Роли и доступ сотрудников</p></div>
+            <i class="bi bi-chevron-right"></i>
+        </a>
     }
 </div>

@@ -1,0 +1,17 @@
+@model Appointment
+@{
+    var ru = new System.Globalization.CultureInfo("ru-RU");
+}
+<div class="talon">
+    <div class="talon-main">
+        <div class="talon-head"><span>Талон на приём</span><span>№ @Model.Id</span></div>
+        <div class="talon-when">
+            <span class="talon-time">@Model.StartTime.ToString("HH:mm")</span>
+            <span class="talon-day">@Model.StartTime.ToString("dddd, d MMMM", ru)</span>
+        </div>
+        <div class="talon-doc">@Model.Doctor!.FullName</div>
+        <div class="talon-spec">@Model.Doctor.Specialty!.Name</div>
+        <partial name="_Stamp" />
+    </div>
+    <div class="talon-stub">Кабинет<span class="cab lg">@Model.Doctor.Cabinet</span></div>
+</div>

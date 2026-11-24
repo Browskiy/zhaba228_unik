@@ -1,4 +1,4 @@
-﻿@{
+@{
     bool auth = User.Identity?.IsAuthenticated == true;
     string roleName = User.IsInRole("Admin") ? "Администратор" : User.IsInRole("Registrar") ? "Регистратор" : User.IsInRole("Doctor") ? "Врач" : "Пациент";
     string userName = User.Identity?.Name ?? "";
@@ -18,14 +18,11 @@
     @if (auth)
     {
         <div class="app">
-            <aside class="sidebar d-none d-lg-flex">
-                <a class="brand" asp-controller="Home" asp-action="Index">
-                    <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
-                    <span>Регистратура<small>запись к врачу онлайн</small></span>
-                </a>
+            <aside class="sidebar glass d-none d-lg-flex">
+                <partial name="_Brand" />
                 <partial name="_Nav" />
                 <div class="user-card">
-                    <div class="avatar sm @userName.AvatarClass()">
+                    <div class="avatar sm">
                         @if (avatarPath != null) { <img src="@avatarPath" alt="" class="avatar-img" /> }
                         else { @userName.Initials() }
                     </div>
@@ -34,17 +31,14 @@
                         <div class="role">@roleName</div>
                     </div>
                     <form asp-controller="Account" asp-action="Logout" method="post">
-                        <button type="submit" class="btn btn-light btn-sm" title="Выйти"><i class="bi bi-box-arrow-right"></i></button>
+                        <button type="submit" class="btn btn-quiet btn-icon btn-sm" title="Выйти" aria-label="Выйти"><i class="bi bi-box-arrow-right"></i></button>
                     </form>
                 </div>
             </aside>
 
-            <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileNav" style="width:var(--sidebar-w)">
+            <div class="offcanvas offcanvas-start glass" tabindex="-1" id="mobileNav" style="width:var(--sidebar-w)">
                 <div class="offcanvas-body d-flex flex-column">
-                    <a class="brand" asp-controller="Home" asp-action="Index">
-                        <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
-                        <span>Регистратура<small>запись к врачу онлайн</small></span>
-                    </a>
+                    <partial name="_Brand" />
                     <partial name="_Nav" />
                     <form asp-controller="Account" asp-action="Logout" method="post" class="mt-auto pt-3">
                         <button type="submit" class="btn btn-light w-100"><i class="bi bi-box-arrow-right"></i> Выйти</button>
@@ -53,10 +47,10 @@
             </div>
 
             <div class="main">
-                <div class="topbar d-lg-none">
-                    <button class="btn btn-light" data-bs-toggle="offcanvas" data-bs-target="#mobileNav"><i class="bi bi-list"></i></button>
-                    <span class="fw-semibold">Регистратура</span>
-                    <a class="btn btn-light" asp-controller="Notifications" asp-action="Index"><i class="bi bi-bell"></i></a>
+                <div class="topbar glass d-lg-none">
+                    <button class="btn btn-quiet btn-icon" aria-label="Меню" data-bs-toggle="offcanvas" data-bs-target="#mobileNav"><i class="bi bi-list"></i></button>
+                    <span class="fw-medium">Регистратура</span>
+                    <a class="btn btn-quiet btn-icon" aria-label="Уведомления" asp-controller="Notifications" asp-action="Index"><i class="bi bi-bell"></i></a>
                 </div>
                 <main class="content">
                     <partial name="_Flash" />
@@ -68,13 +62,10 @@
     else
     {
         <header class="guest-top">
-            <div class="inner">
-                <a class="brand p-0" asp-controller="Home" asp-action="Index">
-                    <span class="brand-logo"><i class="bi bi-heart-pulse"></i></span>
-                    <span>Регистратура<small>запись к врачу онлайн</small></span>
-                </a>
+            <div class="inner glass">
+                <partial name="_Brand" />
                 <div class="d-flex gap-2">
-                    <a class="btn btn-light" asp-controller="Account" asp-action="Login">Войти</a>
+                    <a class="btn btn-quiet" asp-controller="Account" asp-action="Login">Войти</a>
                     <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Регистрация</a>
                 </div>
             </div>
@@ -87,6 +78,7 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/glass.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -6,22 +6,22 @@
 <div class="page-head">
     <div>
         <h1>Пользователи</h1>
-        <p>Назначайте роли: пациент, регистратор, врач, администратор</p>
+        <p>Роли и доступ сотрудников и пациентов</p>
     </div>
 </div>
 
 <div class="card-x">
     <div class="table-responsive">
         <table class="table table-x">
-            <thead><tr><th>Пользователь</th><th>Логин</th><th>Телефон</th><th>С нами с</th><th>Роль</th></tr></thead>
+            <thead><tr><th>Пользователь</th><th>Логин</th><th>Телефон</th><th>Регистрация</th><th>Роль</th></tr></thead>
             <tbody>
                 @foreach (var u in Model)
                 {
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="avatar sm @u.FullName.AvatarClass()">@u.FullName.Initials()</div>
-                                <span class="fw-semibold">@u.FullName</span>
+                                <div class="avatar sm">@u.FullName.Initials()</div>
+                                <span class="fw-medium">@u.FullName</span>
                             </div>
                         </td>
                         <td class="text-muted">@u.Login</td>
@@ -29,8 +29,7 @@
                         <td>@u.CreatedAt.ToString("dd.MM.yyyy")</td>
                         <td>
                             <form asp-action="SetRole" asp-route-id="@u.Id" method="post" class="d-flex gap-2 align-items-center">
-                                <i class="bi @u.Role.RoleIcon() text-muted"></i>
-                                <select name="role" class="form-select form-select-sm" style="max-width:170px" onchange="this.form.submit()">
+                                <select name="role" class="form-select form-select-sm" aria-label="Роль" style="max-width:170px" onchange="this.form.submit()">
                                     @foreach (UserRole r in Enum.GetValues<UserRole>())
                                     {
                                         <option value="@r" selected="@(r == u.Role)">@r.ToRussian()</option>

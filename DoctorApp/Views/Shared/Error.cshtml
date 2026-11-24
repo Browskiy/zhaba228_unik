@@ -1,11 +1,11 @@
-﻿@model ErrorViewModel
+@model ErrorViewModel
 @{
     ViewData["Title"] = "Ошибка";
 }
 
 <div class="card-x empty">
     <i class="bi bi-exclamation-octagon"></i>
-    <h1 class="h4 text-dark">Что-то пошло не так</h1>
+    <h1>Что-то пошло не так</h1>
     <p>Попробуйте обновить страницу или вернуться на главную.</p>
     @if (Model.ShowRequestId)
     {

@@ -15,7 +15,7 @@
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input type="hidden" asp-for="Id" />
 
-    <h2 class="h6 text-muted mb-3">Основное</h2>
+    <h2 class="form-title">Основное</h2>
     <div class="mb-3">
         <label asp-for="FullName" class="form-label"></label>
         <input asp-for="FullName" class="form-control" placeholder="Фамилия Имя Отчество" />
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <h2 class="h6 text-muted mb-3 mt-2">Часы приёма</h2>
+    <h2 class="form-title">Часы приёма</h2>
     <div class="row">
         <div class="col-md-4 mb-3">
             <label asp-for="WorkStart" class="form-label"></label>
@@ -51,11 +51,11 @@
         </div>
     </div>
 
-    <h2 class="h6 text-muted mb-3 mt-2">Доступ</h2>
+    <h2 class="form-title">Доступ</h2>
     <div class="mb-3">
         <label asp-for="UserId" class="form-label"></label>
         <select asp-for="UserId" class="form-select" asp-items="ViewBag.DoctorUsers">
-            <option value="">— не привязана —</option>
+            <option value="">Не привязана</option>
         </select>
         <div class="form-text">Под этой учётной записью врач увидит своих пациентов</div>
     </div>
@@ -64,7 +64,7 @@
         <label asp-for="IsActive" class="form-check-label"></label>
     </div>
     <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Сохранить</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
         <a asp-action="Index" class="btn btn-light">Отмена</a>
     </div>
 </form>

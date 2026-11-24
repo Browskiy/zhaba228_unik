@@ -9,9 +9,14 @@
 <div class="page-head">
     <div>
         <h1>Приём на сегодня</h1>
-        <p>@DateTime.Today.ToString("dddd, d MMMM", ru)@(doctor != null ? $" · {doctor.Specialty!.Name}, кабинет {doctor.Cabinet}" : "")</p>
+        <p>@DateTime.Today.ToString("dddd, d MMMM", ru)@(doctor != null ? $", {doctor.Specialty!.Name.ToLower()}" : "")
+            @if (doctor != null)
+            {
+                <span class="cab ms-2" title="Кабинет">@doctor.Cabinet</span>
+            }
+        </p>
     </div>
-    <a class="btn btn-primary" asp-controller="Appointments" asp-action="DoctorDay"><i class="bi bi-people"></i> Открыть список пациентов</a>
+    <a class="btn btn-primary" asp-controller="Appointments" asp-action="DoctorDay">Открыть список пациентов</a>
 </div>
 
 @if (doctor == null)
@@ -20,9 +25,30 @@
 }
 else
 {
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-people"></i> Пациентов сегодня</div><div class="value">@today.Count</div></div></div>
-        <div class="col-6 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-check2-circle"></i> Принято</div><div class="value text-success">@today.Count(a => a.Status == AppointmentStatus.Completed)</div></div></div>
-        <div class="col-12 col-lg-4"><div class="card-x stat"><div class="label"><i class="bi bi-arrow-right-circle"></i> Следующий</div><div class="value fs-5 mt-2">@(next != null ? $"{next.StartTime:HH:mm} — {next.Patient!.FullName}" : "—")</div></div></div>
+    <div class="card-x stats mb-4">
+        <div class="stat"><div class="label">Пациентов сегодня</div><div class="value">@today.Count</div></div>
+        <div class="stat"><div class="label">Принято</div><div class="value">@today.Count(a => a.Status == AppointmentStatus.Completed)</div></div>
+        <div class="stat"><div class="label">Следующий</div><div class="value name">@(next != null ? $"{next.StartTime:HH:mm}, {next.Patient!.FullName}" : "Нет")</div></div>
     </div>
+
+    @if (today.Count > 0)
+    {
+        <div class="card-x">
+            <div class="table-responsive">
+                <table class="table table-x">
+                    <thead><tr><th>Время</th><th>Пациент</th><th>Статус</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in today)
+                        {
+                            <tr>
+                                <td class="time-cell">@a.StartTime.ToString("HH:mm")</td>
+                                <td>@a.Patient!.FullName</td>
+                                <td><span class="@a.Status.BadgeClass()">@a.Status.ToRussian()</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 }

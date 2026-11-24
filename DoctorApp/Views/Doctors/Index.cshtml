@@ -29,7 +29,7 @@
     }
 </div>
 
-<form method="get" class="mb-3">
+<form method="get" class="mb-4">
     <div class="d-flex flex-wrap gap-2 mb-3">
         <a class="chip @(current == null ? "active" : "")" asp-route-search="@ViewBag.Search">Все</a>
         @foreach (var s in specialties)
@@ -41,54 +41,43 @@
     {
         <input type="hidden" name="specialtyId" value="@current" />
     }
-    <div class="input-group" style="max-width:420px">
-        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-        <input name="search" value="@ViewBag.Search" class="form-control" placeholder="Поиск по фамилии" />
-        <button class="btn btn-primary">Найти</button>
+    <div class="search">
+        <div class="field"><i class="bi bi-search"></i><input name="search" value="@ViewBag.Search" class="form-control" placeholder="Поиск по фамилии" aria-label="Поиск по фамилии" /></div>
+        <button class="btn btn-light">Найти</button>
     </div>
 </form>
 
 @if (Model.Count == 0)
 {
-    <div class="card-x empty"><i class="bi bi-person-x"></i>Врачи не найдены</div>
+    <div class="card-x empty">Врачи не найдены</div>
 }
 
-<div class="row g-3">
-    @foreach (var d in Model)
-    {
-        <div class="col-md-6 col-xl-4">
-            <div class="card-x doctor-card @(d.IsActive ? "" : "opacity-50")">
-                <div class="d-flex gap-3 align-items-center">
-                    <div class="avatar @d.FullName.AvatarClass()">@d.FullName.Initials()</div>
-                    <div class="flex-grow-1">
-                        <div class="fw-semibold">@d.FullName</div>
-                        <span class="pill spec">@d.Specialty!.Name</span>
-                        @if (!d.IsActive)
-                        {
-                            <span class="pill st-2">не ведёт приём</span>
-                        }
-                    </div>
+@if (Model.Count > 0)
+{
+    <div class="card-x">
+        @foreach (var d in Model)
+        {
+            <div class="doc-row @(d.IsActive ? "" : "off")">
+                <span class="cab" title="Кабинет">@d.Cabinet</span>
+                <div>
+                    <div class="fw-medium">@d.FullName</div>
+                    <div class="spec">@d.Specialty!.Name@(d.IsActive ? "" : ", не ведёт приём")</div>
                 </div>
-                <div class="meta">
-                    <span><i class="bi bi-door-open"></i> Кабинет @d.Cabinet</span>
-                    <span><i class="bi bi-clock"></i> @d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm"), приём @d.SlotMinutes мин</span>
-                </div>
-                <div class="d-flex gap-2 mt-auto">
+                <div class="hours">@d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm")<br />приём @d.SlotMinutes мин</div>
+                <div class="doc-actions">
                     @if (d.IsActive)
                     {
-                        <a class="btn btn-primary flex-grow-1" asp-action="Schedule" asp-route-id="@d.Id">
-                            @(patient ? "Записаться" : staff ? "Записать" : "Расписание")
-                        </a>
+                        <a class="btn btn-light" asp-action="Schedule" asp-route-id="@d.Id">@(patient ? "Записаться" : staff ? "Записать" : "Расписание")</a>
                     }
                     @if (staff)
                     {
-                        <a class="btn btn-light" asp-action="Edit" asp-route-id="@d.Id" title="Изменить"><i class="bi bi-pencil"></i></a>
+                        <a class="btn btn-quiet btn-icon" asp-action="Edit" asp-route-id="@d.Id" title="Изменить" aria-label="Изменить"><i class="bi bi-pencil"></i></a>
                         <form asp-action="Delete" asp-route-id="@d.Id" method="post" onsubmit="return confirm('Удалить врача @d.FullName?');">
-                            <button class="btn btn-light text-danger" title="Удалить"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-quiet danger btn-icon" title="Удалить" aria-label="Удалить"><i class="bi bi-trash"></i></button>
                         </form>
                     }
                 </div>
             </div>
-        </div>
-    }
-</div>
+        }
+    </div>
+}

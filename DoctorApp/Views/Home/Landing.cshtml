@@ -1,46 +1,80 @@
 @{
     ViewData["Title"] = "Главная";
     var specialties = (List<string>)ViewBag.Specialties;
+    int doctorCount = ViewBag.DoctorCount;
+    var ru = new System.Globalization.CultureInfo("ru-RU");
+    var days = Enumerable.Range(1, 9).Select(i => DateTime.Today.AddDays(i))
+        .Where(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)).Take(5).ToList();
+    int[] free = { 3, 7, 5, 0, 11 };
+    string[] slots = { "14:20", "15:00", "16:40", "17:00", "17:20", "18:00" };
 }
 
-<section class="hero mb-4">
-    <i class="bi bi-heart-pulse big-icon"></i>
-    <h1>Запись к врачу без очередей и звонков</h1>
-    <p class="mb-4">Выберите специалиста, посмотрите свободное время и запишитесь на приём за минуту.
-        Сейчас принимают @ViewBag.DoctorCount врачей.</p>
-    <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-white btn-lg" asp-controller="Account" asp-action="Register"><i class="bi bi-person-plus"></i> Зарегистрироваться</a>
-        <a class="btn btn-ghost-white btn-lg" asp-controller="Account" asp-action="Login">У меня есть аккаунт</a>
+<section class="hero">
+    <div>
+        <h1>Талон к врачу без очереди в регистратуру</h1>
+        <p class="sub">Выберите специалиста и свободное время. Сейчас @doctorCount.Plural("принимает", "принимают", "принимают") @doctorCount @doctorCount.Plural("врач", "врача", "врачей").</p>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-primary btn-lg" asp-controller="Account" asp-action="Register">Зарегистрироваться</a>
+            <a class="btn btn-light btn-lg" asp-controller="Account" asp-action="Login">У меня есть аккаунт</a>
+        </div>
+    </div>
+
+    <div class="preview" aria-hidden="true">
+        <div class="win">
+            <div class="doc-head">
+                <span class="cab lg">102</span>
+                <div>
+                    <div class="fw-medium">Козлов Андрей Николаевич</div>
+                    <p>Терапевт, приём 14:00–19:00</p>
+                </div>
+            </div>
+            <div class="day-strip">
+                @for (int i = 0; i < days.Count; i++)
+                {
+                    <div class="day @(i == 1 ? "active" : free[i] == 0 ? "full" : "")">
+                        <div class="dw">@days[i].ToString("ddd", ru)</div>
+                        <div class="dn">@days[i].Day</div>
+                        <div class="free">@(free[i] == 0 ? "нет мест" : $"{free[i]} {free[i].Plural("место", "места", "мест")}")</div>
+                    </div>
+                }
+            </div>
+            <div class="slots">
+                @foreach (var s in slots)
+                {
+                    <span class="slot @(s == "16:40" ? "selected" : "")">@s</span>
+                }
+            </div>
+        </div>
+        <div class="talon-shadow">
+            <div class="talon">
+                <div class="talon-main">
+                    <div class="talon-head"><span>Талон на приём</span><span>№ 248</span></div>
+                    <div class="talon-when">
+                        <span class="talon-time">16:40</span>
+                        <span class="talon-day">@days[1].ToString("dddd, d MMMM", ru)</span>
+                    </div>
+                    <div class="talon-doc">Козлов Андрей Николаевич</div>
+                    <div class="talon-spec">Терапевт</div>
+                    <partial name="_Stamp" />
+                </div>
+                <div class="talon-stub">Кабинет<span class="cab lg">102</span></div>
+            </div>
+        </div>
     </div>
 </section>
 
-<div class="row g-3 how mb-4">
-    <div class="col-md-4">
-        <div class="card-x card-pad h-100 d-flex gap-3">
-            <div class="num">1</div>
-            <div><h3 class="h6 mb-1">Выберите врача</h3><p class="text-muted mb-0 small">По специальности или фамилии</p></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card-x card-pad h-100 d-flex gap-3">
-            <div class="num">2</div>
-            <div><h3 class="h6 mb-1">Выберите день и время</h3><p class="text-muted mb-0 small">Видно только свободное время</p></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card-x card-pad h-100 d-flex gap-3">
-            <div class="num">3</div>
-            <div><h3 class="h6 mb-1">Приходите на приём</h3><p class="text-muted mb-0 small">Напомним за сутки</p></div>
-        </div>
-    </div>
-</div>
+<section class="how">
+    <div><h3><span>1</span>Выберите врача</h3><p>По специальности или фамилии</p></div>
+    <div><h3><span>2</span>Выберите день и время</h3><p>Видно только свободное время</p></div>
+    <div><h3><span>3</span>Приходите на приём</h3><p>Напомним за сутки</p></div>
+</section>
 
-<div class="card-x card-pad">
-    <h2 class="h6 text-muted mb-3">Специальности</h2>
-    <div class="d-flex flex-wrap gap-2">
+<section>
+    <h2 class="section-title">Специальности</h2>
+    <ul class="spec-list">
         @foreach (var s in specialties)
         {
-            <span class="chip">@s</span>
+            <li>@s</li>
         }
-    </div>
-</div>
+    </ul>
+</section>
