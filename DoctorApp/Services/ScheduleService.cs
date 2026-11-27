@@ -17,12 +17,13 @@ public class ScheduleService
 
     public static List<DateTime> AllSlots(Doctor doctor, DateTime date)
     {
-        var slots = new List<DateTime>();
-        if (doctor.SlotMinutes <= 0 || doctor.WorkEnd <= doctor.WorkStart)
-            return slots;
-        if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
-            return slots;
+        if (doctor.SlotMinutes <= 0
+            || doctor.WorkEnd <= doctor.WorkStart
+            || date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            return new List<DateTime>();
 
+        int count = (int)((doctor.WorkEnd - doctor.WorkStart).TotalMinutes / doctor.SlotMinutes);
+        var slots = new List<DateTime>(count);
         DateTime time = date.Date + doctor.WorkStart.ToTimeSpan();
         DateTime end = date.Date + doctor.WorkEnd.ToTimeSpan();
         while (time.AddMinutes(doctor.SlotMinutes) <= end)
@@ -31,6 +32,20 @@ public class ScheduleService
             time = time.AddMinutes(doctor.SlotMinutes);
         }
         return slots;
+    }
+
+    public static bool IsSlotTime(Doctor doctor, DateTime start)
+    {
+        if (doctor.SlotMinutes <= 0
+            || doctor.WorkEnd <= doctor.WorkStart
+            || start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            return false;
+
+        TimeSpan slot = TimeSpan.FromMinutes(doctor.SlotMinutes);
+        TimeSpan offset = start.TimeOfDay - doctor.WorkStart.ToTimeSpan();
+        return offset >= TimeSpan.Zero
+            && offset.Ticks % slot.Ticks == 0
+            && start.TimeOfDay + slot <= doctor.WorkEnd.ToTimeSpan();
     }
 
     public async Task<List<DateTime>> FreeSlotsAsync(Doctor doctor, DateTime date)
@@ -66,9 +81,45 @@ public class ScheduleService
             .ToList();
     }
 
+    public async Task<Dictionary<int, DateTime>> NearestFreeSlotsAsync(IEnumerable<Doctor> doctors, int days = 21)
+    {
+        var active = doctors.Where(d => d.IsActive).ToList();
+        var nearest = new Dictionary<int, DateTime>();
+        if (active.Count == 0)
+            return nearest;
+
+        DateTime from = DateTime.Today;
+        DateTime to = from.AddDays(days);
+        var ids = active.Select(d => d.Id).ToList();
+        var busy = (await _db.Appointments
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.DoctorId)
+                            && a.Status == AppointmentStatus.Scheduled
+                            && a.StartTime >= from && a.StartTime < to)
+                .Select(a => new { a.DoctorId, a.StartTime })
+                .ToListAsync())
+            .ToLookup(a => a.DoctorId, a => a.StartTime);
+
+        DateTime now = DateTime.Now;
+        foreach (var doctor in active)
+        {
+            var taken = busy[doctor.Id].ToHashSet();
+            for (DateTime day = from; day < to; day = day.AddDays(1))
+            {
+                var free = AllSlots(doctor, day).Where(s => s > now && !taken.Contains(s)).Take(1).ToList();
+                if (free.Count > 0)
+                {
+                    nearest[doctor.Id] = free[0];
+                    break;
+                }
+            }
+        }
+        return nearest;
+    }
+
     public async Task<bool> IsSlotFreeAsync(Doctor doctor, DateTime start, int? ignoreAppointmentId = null)
     {
-        if (!doctor.IsActive || start <= DateTime.Now || !AllSlots(doctor, start.Date).Contains(start))
+        if (!doctor.IsActive || start <= DateTime.Now || !IsSlotTime(doctor, start))
             return false;
 
         return !await _db.Appointments.AnyAsync(a =>

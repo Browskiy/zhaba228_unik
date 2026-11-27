@@ -27,6 +27,7 @@
             <div class="talon-wrap">
                 <partial name="_Talon" model="a" />
                 <div class="talon-actions">
+                    <a class="btn btn-light" asp-action="Ticket" asp-route-id="@a.Id" asp-route-print="1"><i class="bi bi-printer"></i> Распечатать</a>
                     <a class="btn btn-light" asp-controller="Doctors" asp-action="Schedule"
                        asp-route-id="@a.DoctorId" asp-route-date="@a.StartTime.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@a.Id">Перенести</a>
                     <form asp-action="Cancel" asp-route-id="@a.Id" method="post" onsubmit="return confirm('Отменить запись на @a.StartTime.ToString("dd.MM HH:mm")?');">
@@ -48,6 +49,7 @@
                 </div>
                 <span class="cab" title="Кабинет">@a.Doctor.Cabinet</span>
                 <div class="d-flex gap-1">
+                    <a class="btn btn-quiet btn-icon" asp-action="Ticket" asp-route-id="@a.Id" title="Талон" aria-label="Талон"><i class="bi bi-ticket-perforated"></i></a>
                     <a class="btn btn-light" asp-controller="Doctors" asp-action="Schedule"
                        asp-route-id="@a.DoctorId" asp-route-date="@a.StartTime.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@a.Id">Перенести</a>
                     <form asp-action="Cancel" asp-route-id="@a.Id" method="post" onsubmit="return confirm('Отменить запись на @a.StartTime.ToString("dd.MM HH:mm")?');">

@@ -1,6 +1,7 @@
 using DoctorApp.Data;
 using DoctorApp.Models;
 using DoctorApp.Services;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -43,32 +44,47 @@ public class AppointmentsController : AppController
         {
             _logger.LogWarning("Запись отклонена: пациент {PatientId} не найден", patient);
             Error("Выберите пациента из списка.");
-            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
+            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = DayParam(start) });
         }
 
         if (!await _schedule.IsSlotFreeAsync(doctor, start))
         {
             _logger.LogInformation("Запись отклонена: время {Start} врача {DoctorId} занято или недоступно", start, doctorId);
             Error("Это время уже занято или недоступно. Выберите другое.");
-            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
+            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = DayParam(start) });
         }
 
         if (await PatientBusyAsync(patient, start, null))
         {
             _logger.LogInformation("Запись отклонена: у пациента {PatientId} уже есть запись на {Start}", patient, start);
             Error("У пациента уже есть запись на это время к другому врачу.");
-            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
+            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = DayParam(start) });
         }
 
-        _db.Appointments.Add(new Appointment { DoctorId = doctorId, PatientId = patient, StartTime = start });
+        var appointment = new Appointment { DoctorId = doctorId, PatientId = patient, StartTime = start };
+        _db.Appointments.Add(appointment);
         _notifications.Add(patient, $"Вы записаны на приём {start:dd.MM.yyyy HH:mm}: {doctor.Specialty!.Name.ToLower()} {doctor.FullName}, кабинет {doctor.Cabinet}.");
 
         if (!await TrySaveAsync())
-            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = start.Date });
+            return RedirectToAction("Schedule", "Doctors", new { id = doctorId, date = DayParam(start) });
 
         _logger.LogInformation("Создана запись на {Start} к врачу {DoctorId} для пациента {PatientId}", start, doctorId, patient);
-        Success($"Запись на {start:dd.MM.yyyy HH:mm} оформлена");
-        return IsStaff ? RedirectToAction(nameof(All), new { date = start.Date }) : RedirectToAction(nameof(My));
+        TempData["Booked"] = "new";
+        return RedirectToAction(nameof(Ticket), new { id = appointment.Id });
+    }
+
+    public async Task<IActionResult> Ticket(int id)
+    {
+        var a = await _db.Appointments
+            .AsNoTracking()
+            .Include(x => x.Doctor).ThenInclude(d => d!.Specialty)
+            .Include(x => x.Patient)
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (a == null)
+            return NotFound();
+        if (!IsStaff && a.PatientId != CurrentUserId && a.Doctor!.UserId != CurrentUserId)
+            return Forbid();
+        return View(a);
     }
 
     public async Task<IActionResult> My()
@@ -117,14 +133,14 @@ public class AppointmentsController : AppController
         {
             _logger.LogInformation("Перенос записи {AppointmentId} на {Start} отклонён: время недоступно", id, start);
             Error("Перенести запись на это время нельзя");
-            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
+            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = DayParam(start), rescheduleId = id });
         }
 
         if (await PatientBusyAsync(a.PatientId, start, a.Id))
         {
             _logger.LogInformation("Перенос записи {AppointmentId} отклонён: у пациента уже есть запись на {Start}", id, start);
             Error("У пациента уже есть запись на это время к другому врачу.");
-            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
+            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = DayParam(start), rescheduleId = id });
         }
 
         DateTime old = a.StartTime;
@@ -132,11 +148,11 @@ public class AppointmentsController : AppController
         _notifications.Add(a.PatientId, $"Запись к врачу {a.Doctor!.FullName} перенесена с {old:dd.MM.yyyy HH:mm} на {start:dd.MM.yyyy HH:mm}.");
 
         if (!await TrySaveAsync())
-            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = start.Date, rescheduleId = id });
+            return RedirectToAction("Schedule", "Doctors", new { id = a.DoctorId, date = DayParam(start), rescheduleId = id });
 
         _logger.LogInformation("Запись {AppointmentId} перенесена с {Old} на {Start}", id, old, start);
-        Success($"Запись перенесена на {start:dd.MM.yyyy HH:mm}");
-        return IsStaff ? RedirectToAction(nameof(All), new { date = start.Date }) : RedirectToAction(nameof(My));
+        TempData["Booked"] = "moved";
+        return RedirectToAction(nameof(Ticket), new { id });
     }
 
     [Authorize(Roles = Staff)]
@@ -201,6 +217,8 @@ public class AppointmentsController : AppController
         Success($"Статус записи изменён: {status.ToRussian()}");
         return Back();
     }
+
+    private static string DayParam(DateTime value) => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private Task<Appointment?> LoadAsync(int id)
     {

@@ -175,4 +175,80 @@ public class ScheduleServiceTests
         Assert.Equal(10, days.Count);
         Assert.All(days, d => Assert.Equal(0, d.Free));
     }
+
+    [Fact]
+    public void IsSlotTime_AgreesWithAllSlotsForEveryMinuteOfDay()
+    {
+        var doctor = TestDb.NewDoctor();
+        DateTime day = TestDb.NextWeekday();
+        var slots = ScheduleService.AllSlots(doctor, day).ToHashSet();
+
+        for (int minute = 0; minute < 24 * 60; minute++)
+        {
+            DateTime probe = day.AddMinutes(minute);
+            Assert.Equal(slots.Contains(probe), ScheduleService.IsSlotTime(doctor, probe));
+        }
+    }
+
+    [Fact]
+    public void IsSlotTime_WithSecondsOrWeekendOrZeroSlot_ReturnsFalse()
+    {
+        var doctor = TestDb.NewDoctor();
+        DateTime day = TestDb.NextWeekday();
+        DateTime saturday = day;
+        while (saturday.DayOfWeek != DayOfWeek.Saturday)
+            saturday = saturday.AddDays(1);
+
+        Assert.False(ScheduleService.IsSlotTime(doctor, day.AddHours(8).AddSeconds(1)));
+        Assert.False(ScheduleService.IsSlotTime(doctor, saturday.AddHours(8)));
+        Assert.False(ScheduleService.IsSlotTime(TestDb.NewDoctor(0), day.AddHours(8)));
+    }
+
+    [Fact]
+    public async Task NearestFreeSlotsAsync_SkipsBusySlotsButNotCancelled()
+    {
+        using var db = TestDb.Create();
+        var service = new ScheduleService(db, NullLogger<ScheduleService>.Instance);
+        var doctor = TestDb.NewDoctor();
+        DateTime day = TestDb.NextWeekday();
+        foreach (DateTime slot in ScheduleService.AllSlots(doctor, DateTime.Today))
+            db.Appointments.Add(new Appointment { DoctorId = doctor.Id, PatientId = 10, StartTime = slot });
+        var slots = ScheduleService.AllSlots(doctor, day);
+        db.Appointments.Add(new Appointment { DoctorId = doctor.Id, PatientId = 10, StartTime = slots[0] });
+        db.Appointments.Add(new Appointment { DoctorId = doctor.Id, PatientId = 11, StartTime = slots[1] });
+        db.Appointments.Add(new Appointment { DoctorId = doctor.Id, PatientId = 12, StartTime = slots[2], Status = AppointmentStatus.Cancelled });
+        await db.SaveChangesAsync();
+
+        var nearest = await service.NearestFreeSlotsAsync(new[] { doctor });
+
+        Assert.Equal(slots[2], nearest[doctor.Id]);
+    }
+
+    [Fact]
+    public async Task NearestFreeSlotsAsync_InactiveDoctor_IsNotIncluded()
+    {
+        using var db = TestDb.Create();
+        var service = new ScheduleService(db, NullLogger<ScheduleService>.Instance);
+        var doctor = TestDb.NewDoctor();
+        doctor.IsActive = false;
+
+        var nearest = await service.NearestFreeSlotsAsync(new[] { doctor });
+
+        Assert.Empty(nearest);
+    }
+
+    [Fact]
+    public async Task NearestFreeSlotsAsync_NoFreeTimeInRange_IsNotIncluded()
+    {
+        using var db = TestDb.Create();
+        var service = new ScheduleService(db, NullLogger<ScheduleService>.Instance);
+        var doctor = TestDb.NewDoctor();
+        foreach (DateTime slot in ScheduleService.AllSlots(doctor, DateTime.Today))
+            db.Appointments.Add(new Appointment { DoctorId = doctor.Id, PatientId = 10, StartTime = slot });
+        await db.SaveChangesAsync();
+
+        var nearest = await service.NearestFreeSlotsAsync(new[] { doctor }, days: 1);
+
+        Assert.Empty(nearest);
+    }
 }

@@ -57,6 +57,7 @@ public class DoctorScheduleViewModel
     public Appointment? Rescheduling { get; set; }
     public List<User> Patients { get; set; } = new();
     public List<(DateTime Day, int Free)> Days { get; set; } = new();
+    public HashSet<DateTime> PatientBusy { get; set; } = new();
 }
 
 public class ReportRow

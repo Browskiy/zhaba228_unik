@@ -5,6 +5,7 @@
     ViewData["Title"] = patient ? "Запись к врачу" : "Врачи";
     var specialties = (List<Specialty>)ViewBag.SpecialtyList;
     int? current = ViewBag.SpecialtyId;
+    var nearest = (Dictionary<int, DateTime>)ViewBag.Nearest;
 }
 
 @if (patient)
@@ -61,9 +62,24 @@
                 <span class="cab" title="Кабинет">@d.Cabinet</span>
                 <div>
                     <div class="fw-medium">@d.FullName</div>
-                    <div class="spec">@d.Specialty!.Name@(d.IsActive ? "" : ", не ведёт приём")</div>
+                    <div class="spec">@d.Specialty!.Name, @d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm"), приём @d.SlotMinutes мин</div>
                 </div>
-                <div class="hours">@d.WorkStart.ToString("HH:mm")–@d.WorkEnd.ToString("HH:mm")<br />приём @d.SlotMinutes мин</div>
+                <div class="doc-next">
+                    @if (!d.IsActive)
+                    {
+                        <span class="none">Не ведёт приём</span>
+                    }
+                    else if (nearest.TryGetValue(d.Id, out var slot))
+                    {
+                        <span class="label">Ближайшее время</span>
+                        <a asp-action="Schedule" asp-route-id="@d.Id" asp-route-date="@slot.ToString("yyyy-MM-dd")" asp-route-time="@slot.ToString("HH:mm")">@slot.DayLabel(), @slot.ToString("HH:mm")</a>
+                    }
+                    else
+                    {
+                        <span class="label">Ближайшее время</span>
+                        <span class="none">Нет на 3 недели</span>
+                    }
+                </div>
                 <div class="doc-actions">
                     @if (d.IsActive)
                     {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DoctorApp.Controllers;
 
@@ -15,12 +16,24 @@ public class DoctorsController : AppController
     private readonly AppDbContext _db;
     private readonly ScheduleService _schedule;
     private readonly ILogger<DoctorsController> _logger;
+    private readonly IMemoryCache _cache;
 
-    public DoctorsController(AppDbContext db, ScheduleService schedule, ILogger<DoctorsController> logger)
+    public DoctorsController(AppDbContext db, ScheduleService schedule, ILogger<DoctorsController> logger, IMemoryCache cache)
     {
         _db = db;
         _schedule = schedule;
         _logger = logger;
+        _cache = cache;
+    }
+
+    private async Task<List<Specialty>> SpecialtiesAsync()
+    {
+        var list = await _cache.GetOrCreateAsync("specialties", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            return await _db.Specialties.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
+        });
+        return list!;
     }
 
     public async Task<IActionResult> Index(int? specialtyId, string? search)
@@ -34,10 +47,12 @@ public class DoctorsController : AppController
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(d => EF.Functions.ILike(d.FullName, $"%{search.Trim()}%"));
 
-        ViewBag.SpecialtyList = await _db.Specialties.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
+        ViewBag.SpecialtyList = await SpecialtiesAsync();
         ViewBag.SpecialtyId = specialtyId;
         ViewBag.Search = search;
-        return View(await query.OrderBy(d => d.Specialty!.Name).ThenBy(d => d.FullName).ToListAsync());
+        var doctors = await query.OrderBy(d => d.Specialty!.Name).ThenBy(d => d.FullName).ToListAsync();
+        ViewBag.Nearest = await _schedule.NearestFreeSlotsAsync(doctors);
+        return View(doctors);
     }
 
     [Authorize]
@@ -48,19 +63,36 @@ public class DoctorsController : AppController
         if (doctor == null)
             return NotFound();
 
-        DateTime day = (date ?? DateTime.Today).Date;
+        DayOfWeek weekday = DateTime.Today.DayOfWeek;
+        int restOfWeek = weekday is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0 : DayOfWeek.Saturday - weekday;
+        var days = await _schedule.FreeCountsAsync(doctor, restOfWeek + 10);
+
+        DateTime day = date?.Date ?? days.Where(d => d.Free > 0).Select(d => d.Day).DefaultIfEmpty(DateTime.Today).First();
         var model = new DoctorScheduleViewModel
         {
             Doctor = doctor,
             Date = day,
+            Days = days,
             FreeSlots = doctor.IsActive ? await _schedule.FreeSlotsAsync(doctor, day) : new(),
             RescheduleId = rescheduleId
         };
 
-        model.Days = await _schedule.FreeCountsAsync(doctor, 10);
-
         if (rescheduleId.HasValue)
             model.Rescheduling = await _db.Appointments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == rescheduleId);
+
+        if (User.IsInRole("Patient"))
+        {
+            int me = CurrentUserId;
+            var mine = await _db.Appointments
+                .AsNoTracking()
+                .Where(a => a.PatientId == me
+                            && a.Status == AppointmentStatus.Scheduled
+                            && a.StartTime >= day && a.StartTime < day.AddDays(1)
+                            && a.Id != rescheduleId)
+                .Select(a => a.StartTime)
+                .ToListAsync();
+            model.PatientBusy = mine.ToHashSet();
+        }
 
         if (User.IsInRole("Admin") || User.IsInRole("Registrar"))
             model.Patients = await _db.Users.AsNoTracking().Where(u => u.Role == UserRole.Patient).OrderBy(u => u.FullName).ToListAsync();

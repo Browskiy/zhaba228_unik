@@ -1,16 +1,21 @@
 @model Appointment
 @{
-    var ru = new System.Globalization.CultureInfo("ru-RU");
+    var ru = DisplayExtensions.Ru;
+    bool scheduled = Model.Status == AppointmentStatus.Scheduled;
 }
-<div class="talon">
+<div class="talon@(scheduled ? "" : " void")">
     <div class="talon-main">
-        <div class="talon-head"><span>Талон на приём</span><span>№ @Model.Id</span></div>
+        <div class="talon-head"><span>Талон на приём</span><span>№ @Model.Id@(scheduled ? "" : ", " + Model.Status.ToRussian().ToLower(ru))</span></div>
         <div class="talon-when">
             <span class="talon-time">@Model.StartTime.ToString("HH:mm")</span>
             <span class="talon-day">@Model.StartTime.ToString("dddd, d MMMM", ru)</span>
         </div>
         <div class="talon-doc">@Model.Doctor!.FullName</div>
         <div class="talon-spec">@Model.Doctor.Specialty!.Name</div>
+        @if (ViewData["TalonPatient"] is true && Model.Patient != null)
+        {
+            <div class="talon-patient">Пациент: @Model.Patient.FullName</div>
+        }
         <partial name="_Stamp" />
     </div>
     <div class="talon-stub">Кабинет<span class="cab lg">@Model.Doctor.Cabinet</span></div>

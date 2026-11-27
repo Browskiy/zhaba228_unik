@@ -1,0 +1,64 @@
+@model Appointment
+@{
+    bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
+    bool patient = User.IsInRole("Patient");
+    string? booked = TempData["Booked"] as string;
+    bool upcoming = Model.Status == AppointmentStatus.Scheduled && Model.StartTime > DateTime.Now;
+    ViewData["Title"] = "Талон на приём";
+    ViewData["TalonPatient"] = true;
+    string heading = booked switch
+    {
+        "new" => staff ? "Пациент записан" : "Вы записаны",
+        "moved" => "Запись перенесена",
+        _ => "Талон на приём"
+    };
+    string note = Model.Status != AppointmentStatus.Scheduled ? $"Статус: {Model.Status.ToRussian().ToLower(DisplayExtensions.Ru)}"
+        : patient ? "Перенести или отменить запись можно в разделе «Мои записи»"
+        : staff ? "Распечатайте талон и отдайте пациенту"
+        : $"Пациент: {Model.Patient!.FullName}";
+}
+
+@if (booked == "new")
+{
+    <div class="steps">
+        <div class="step done"><span class="n"><i class="bi bi-check"></i></span> Врач выбран</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step done"><span class="n"><i class="bi bi-check"></i></span> День и время</div>
+        <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
+        <div class="step done"><span class="n"><i class="bi bi-check"></i></span> Подтверждение</div>
+    </div>
+}
+
+<div class="page-head">
+    <div>
+        <h1>@heading</h1>
+        <p>@note</p>
+    </div>
+</div>
+
+<div class="ticket">
+    <partial name="_Talon" model="Model" />
+    <div class="ticket-actions">
+        <button type="button" class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Распечатать талон</button>
+        @if (staff)
+        {
+            <a class="btn btn-light" asp-action="All" asp-route-date="@Model.StartTime.ToString("yyyy-MM-dd")">Журнал записей</a>
+        }
+        else if (patient)
+        {
+            <a class="btn btn-light" asp-action="My">Мои записи</a>
+        }
+        @if (upcoming && (staff || patient))
+        {
+            <a class="btn btn-quiet" asp-controller="Doctors" asp-action="Schedule" asp-route-id="@Model.DoctorId"
+               asp-route-date="@Model.StartTime.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.Id">Перенести</a>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @if (Context.Request.Query["print"] == "1")
+    {
+        <script>addEventListener('load', function () { setTimeout(print, 300); });</script>
+    }
+}

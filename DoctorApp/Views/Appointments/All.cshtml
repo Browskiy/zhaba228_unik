@@ -62,6 +62,7 @@
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-quiet btn-icon" data-bs-toggle="dropdown" title="Ещё" aria-label="Ещё"><i class="bi bi-three-dots"></i></button>
                                         <ul class="dropdown-menu dropdown-menu-end glass">
+                                            <li><a class="dropdown-item" asp-action="Ticket" asp-route-id="@a.Id"><i class="bi bi-ticket-perforated"></i> Талон</a></li>
                                             <li><a class="dropdown-item" asp-controller="Doctors" asp-action="Schedule" asp-route-id="@a.DoctorId" asp-route-date="@a.StartTime.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@a.Id"><i class="bi bi-arrow-repeat"></i> Перенести</a></li>
                                             <li>
                                                 <form asp-action="Cancel" asp-route-id="@a.Id" method="post" onsubmit="return confirm('Отменить запись?');">

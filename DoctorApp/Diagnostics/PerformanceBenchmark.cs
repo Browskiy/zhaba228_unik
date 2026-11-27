@@ -4,6 +4,7 @@ using DoctorApp.Data;
 using DoctorApp.Models;
 using DoctorApp.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
@@ -63,6 +64,23 @@ public static class PerformanceBenchmark
         await db.Database.ExecuteSqlRawAsync("ANALYZE appointments");
         after = await MeasureAsync(() => reports.BuildAsync(from, to));
         Print($"3. Отчёт за 90 дней: до {before:F2} мс; проекция и AsNoTracking без индекса {withoutIndex:F2} мс; вместе с индексом по StartTime {after:F2} мс; общее ускорение в {before / after:F1} раза");
+
+        DateTime probeDay = DateTime.Today.AddDays(1);
+        while (probeDay.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            probeDay = probeDay.AddDays(1);
+        DateTime probe = probeDay + doctor.WorkEnd.ToTimeSpan() - TimeSpan.FromMinutes(doctor.SlotMinutes);
+        before = await MeasureAsync(() => { for (int i = 0; i < 20000; i++) _ = ScheduleService.AllSlots(doctor, probe.Date).Contains(probe); return Task.CompletedTask; });
+        after = await MeasureAsync(() => { for (int i = 0; i < 20000; i++) _ = ScheduleService.IsSlotTime(doctor, probe); return Task.CompletedTask; });
+        Print($"4. Проверка принадлежности времени сетке слотов (20 000 проверок): до {before:F2} мс, после {after:F2} мс, ускорение в {before / after:F1} раза");
+
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        before = await MeasureAsync(async () => _ = await db.Specialties.AsNoTracking().OrderBy(s => s.Name).ToListAsync());
+        after = await MeasureAsync(async () => _ = await cache.GetOrCreateAsync("specialties", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+            return await db.Specialties.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
+        }));
+        Print($"5. Список специальностей: запрос к базе {before:F3} мс, из кэша {after:F4} мс, ускорение в {before / after:F0} раз");
 
         var rows = await db.Appointments.AsNoTracking().CountAsync(a => a.StartTime >= from && a.StartTime < to.AddDays(1));
         Print($"   (в отчёт попало записей: {rows})");

@@ -1,7 +1,18 @@
+using System.Globalization;
+
 namespace DoctorApp.Models;
 
 public static class DisplayExtensions
 {
+    public static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
+
+    public static string DayLabel(this DateTime day)
+    {
+        if (day.Date == DateTime.Today) return "сегодня";
+        if (day.Date == DateTime.Today.AddDays(1)) return "завтра";
+        return day.ToString("ddd, d MMMM", Ru);
+    }
+
     public static string ToRussian(this UserRole role) => role switch
     {
         UserRole.Patient => "Пациент",

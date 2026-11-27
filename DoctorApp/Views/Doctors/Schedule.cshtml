@@ -3,14 +3,32 @@
     bool staff = User.IsInRole("Admin") || User.IsInRole("Registrar");
     bool canBook = staff || User.IsInRole("Patient");
     bool reschedule = Model.RescheduleId != null;
-    var ru = new System.Globalization.CultureInfo("ru-RU");
+    var ru = DisplayExtensions.Ru;
     ViewData["Title"] = reschedule ? "Перенос записи" : "Запись к врачу";
+    string? preset = Context.Request.Query["time"];
     var groups = new[]
     {
         ("Утро", Model.FreeSlots.Where(s => s.Hour < 12).ToList()),
         ("День", Model.FreeSlots.Where(s => s.Hour >= 12 && s.Hour < 16).ToList()),
         ("Вечер", Model.FreeSlots.Where(s => s.Hour >= 16).ToList())
     };
+
+    var free = Model.Days.ToDictionary(d => d.Day.Date, d => d.Free);
+    DateTime first = Model.Days.Count > 0 ? Model.Days[0].Day.Date : DateTime.Today;
+    DateTime last = Model.Days.Count > 0 ? Model.Days[^1].Day.Date : first;
+    DateTime monday = first.AddDays(-(((int)first.DayOfWeek + 6) % 7));
+    int weeks = (last - monday).Days / 7 + 1;
+
+    string Cap(string s) => s.Length == 0 ? s : char.ToUpper(s[0], ru) + s[1..];
+    string Month(DateTime d) => ru.DateTimeFormat.GetMonthName(d.Month);
+    string Places(int n) => n == 0 ? "нет мест" : $"{n} {n.Plural("место", "места", "мест")}";
+    string calTitle = Cap(first.Month == last.Month ? Month(first) : $"{Month(first)} – {Month(last)}");
+    string dayLong = Cap(Model.Date.ToString("dddd, d MMMM", ru));
+    string action = reschedule ? "Перенести" : staff ? "Записать" : "Записаться";
+    int available = Model.FreeSlots.Count(s => !Model.PatientBusy.Contains(s));
+    string emptyText = !Model.Doctor.IsActive ? "Врач сейчас не ведёт приём"
+        : Model.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? "В выходные врач не принимает. Выберите будний день."
+        : "На этот день свободного времени нет. Выберите другой день.";
 }
 
 @if (canBook && !reschedule)
@@ -18,9 +36,9 @@
     <div class="steps">
         <div class="step done"><span class="n"><i class="bi bi-check"></i></span> Врач выбран</div>
         <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
-        <div class="step current"><span class="n">2</span> День и время</div>
+        <div class="step current" data-step="time"><span class="n"><span class="num">2</span><i class="bi bi-check"></i></span> День и время</div>
         <span class="step-sep"><i class="bi bi-chevron-right"></i></span>
-        <div class="step"><span class="n">3</span> Подтверждение</div>
+        <div class="step" data-step="confirm"><span class="n">3</span> Подтверждение</div>
     </div>
 }
 
@@ -28,7 +46,7 @@
     <span class="cab lg" title="Кабинет">@Model.Doctor.Cabinet</span>
     <div class="flex-grow-1">
         <h1>@Model.Doctor.FullName</h1>
-        <p>@Model.Doctor.Specialty!.Name, приём @Model.Doctor.WorkStart.ToString("HH:mm")–@Model.Doctor.WorkEnd.ToString("HH:mm")</p>
+        <p>@Model.Doctor.Specialty!.Name, приём @Model.Doctor.WorkStart.ToString("HH:mm")–@Model.Doctor.WorkEnd.ToString("HH:mm"), @Model.Doctor.SlotMinutes мин на пациента</p>
     </div>
     <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Другой врач</a>
 </div>
@@ -39,119 +57,203 @@
         <span>Перенос записи с <span class="fw-medium">@Model.Rescheduling.StartTime.ToString("d MMMM, HH:mm", ru)</span>. Выберите новое время.</span></div>
 }
 
-<div class="card-x mb-3">
-    <div class="card-head">
-        <h2>Выберите день</h2>
-        <form method="get" class="d-flex align-items-center gap-2">
-            <input type="hidden" name="id" value="@Model.Doctor.Id" />
-            @if (reschedule)
-            {
-                <input type="hidden" name="rescheduleId" value="@Model.RescheduleId" />
-            }
-            <label class="small text-muted text-nowrap">Другая дата</label>
-            <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control form-control-sm" onchange="this.form.submit()" />
-        </form>
-    </div>
-    <div class="card-pad">
-        <div class="day-strip">
-            @foreach (var (day, free) in Model.Days)
-            {
-                <a class="day @(day == Model.Date ? "active" : free == 0 ? "full" : "")" asp-route-id="@Model.Doctor.Id" asp-route-date="@day.ToString("yyyy-MM-dd")" asp-route-rescheduleId="@Model.RescheduleId">
-                    <div class="dw">@(day == DateTime.Today ? "сегодня" : day.ToString("ddd", ru))</div>
-                    <div class="dn">@day.Day</div>
-                    <div class="free">@(free == 0 ? "нет мест" : $"{free} {free.Plural("место", "места", "мест")}")</div>
-                </a>
-            }
-        </div>
-    </div>
-</div>
-
-<div class="card-x">
-    <div class="card-head">
-        <h2>Выберите время</h2>
-        <span class="text-muted small">@Model.Date.ToString("dddd, d MMMM", ru)</span>
-    </div>
-    <div class="card-pad">
-        @if (Model.FreeSlots.Count == 0)
-        {
-            <div class="empty py-4">На этот день свободного времени нет. Выберите другой день выше.</div>
-        }
-        else if (!canBook)
-        {
-            <div class="slots">
-                @foreach (var slot in Model.FreeSlots)
-                {
-                    <span class="slot">@slot.ToString("HH:mm")</span>
-                }
+<div class="booking @(canBook ? "can-book" : "")" data-booking>
+    <div class="booking-main">
+        <section class="card-x" aria-labelledby="calTitle">
+            <div class="card-head">
+                <h2 id="calTitle">@calTitle</h2>
+                <form method="get" class="other-date">
+                    <input type="hidden" name="id" value="@Model.Doctor.Id" />
+                    @if (reschedule)
+                    {
+                        <input type="hidden" name="rescheduleId" value="@Model.RescheduleId" />
+                    }
+                    <label for="otherDate" class="small text-muted text-nowrap">Другая дата</label>
+                    <input id="otherDate" type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control form-control-sm" onchange="this.form.submit()" />
+                </form>
             </div>
-        }
-        else
-        {
-            @foreach (var (title, list) in groups.Where(g => g.Item2.Count > 0))
-            {
-                <div class="slot-group">
-                    <h3>@title</h3>
-                    <div class="slots">
-                        @foreach (var slot in list)
+            <div class="cal">
+                <div class="cal-row cal-names" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span></div>
+                @for (int w = 0; w < weeks; w++)
+                {
+                    <div class="cal-row">
+                        @for (int i = 0; i < 5; i++)
                         {
-                            <button type="button" class="slot" data-start="@slot.ToString("yyyy-MM-ddTHH:mm")" data-time="@slot.ToString("HH:mm")" data-label="@slot.ToString("dddd, d MMMM", ru)">@slot.ToString("HH:mm")</button>
+                            DateTime day = monday.AddDays(w * 7 + i);
+                            bool isToday = day == DateTime.Today;
+                            string? mark = isToday ? "сегодня" : day.Day == 1 || (w == 0 && i == 0) ? day.ToString("MMM", ru) : null;
+                            if (free.TryGetValue(day, out int n))
+                            {
+                                bool active = day == Model.Date;
+                                <a class="cal-day@(active ? " active" : "")@(n == 0 ? " full" : "")@(isToday ? " today" : "")"
+                                   href="@Url.Action("Schedule", new { id = Model.Doctor.Id, date = day.ToString("yyyy-MM-dd"), rescheduleId = Model.RescheduleId })"
+                                   aria-current="@(active ? "date" : null)"
+                                   aria-label="@Cap(day.ToString("dddd, d MMMM", ru)), @Places(n)">
+                                    <span class="dn">@day.Day @if (mark != null) { <small>@mark</small> }</span>
+                                    <span class="free">@Places(n)</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="cal-day past" aria-hidden="true"><span class="dn">@day.Day @if (mark != null) { <small>@mark</small> }</span></span>
+                            }
                         }
                     </div>
-                </div>
-            }
-        }
-    </div>
-</div>
-
-@if (canBook && Model.FreeSlots.Count > 0)
-{
-    <form id="bookForm" method="post" asp-controller="Appointments" asp-action="@(reschedule ? "Reschedule" : "Book")" class="confirm-bar glass d-none">
-        <input type="hidden" name="doctorId" value="@Model.Doctor.Id" />
-        <input type="hidden" name="start" id="startInput" />
-        @if (reschedule)
-        {
-            <input type="hidden" name="id" value="@Model.RescheduleId" />
-        }
-        <div class="talon @(staff && !reschedule ? "" : "short")">
-            <div class="talon-main">
-                <span class="talon-time" id="slotTime"></span>
-                <div class="flex-grow-1">
-                    <div class="talon-doc" id="slotLabel"></div>
-                    <div class="talon-spec">@Model.Doctor.FullName</div>
-                </div>
-                <span class="cab lg" title="Кабинет">@Model.Doctor.Cabinet</span>
+                }
             </div>
-            <div class="talon-stub">
+            @if (!free.ContainsKey(Model.Date))
+            {
+                <p class="cal-note">Выбрана дата вне календаря: @dayLong</p>
+            }
+        </section>
+
+        <section class="card-x" id="time" aria-labelledby="timeTitle">
+            <div class="card-head">
+                <h2 id="timeTitle">Время</h2>
+                <span class="small text-muted">@dayLong@(available > 0 ? $", свободно {available}" : "")</span>
+            </div>
+            <div class="card-pad">
+                @if (Model.FreeSlots.Count == 0)
+                {
+                    <div class="empty py-4">@emptyText</div>
+                }
+                else if (!canBook)
+                {
+                    <div class="slots">
+                        @foreach (var slot in Model.FreeSlots)
+                        {
+                            <span class="slot">@slot.ToString("HH:mm")</span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div role="radiogroup" aria-labelledby="timeTitle">
+                        @foreach (var (title, list) in groups.Where(g => g.Item2.Count > 0))
+                        {
+                            <div class="slot-group">
+                                <h3>@title</h3>
+                                <div class="slots">
+                                    @foreach (var slot in list)
+                                    {
+                                        string time = slot.ToString("HH:mm");
+                                        if (Model.PatientBusy.Contains(slot))
+                                        {
+                                            <span class="slot busy" title="В это время у вас приём у другого врача">@time<span class="visually-hidden">, у вас приём у другого врача</span></span>
+                                            continue;
+                                        }
+                                        <label class="slot-pick">
+                                            <input class="slot-input" type="radio" name="start" form="bookForm" required
+                                                   value="@slot.ToString("yyyy-MM-ddTHH:mm")" data-time="@time" checked="@(time == preset)" />
+                                            <span class="slot">@time</span>
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+
+    @if (canBook)
+    {
+        <aside class="booking-side">
+            <form id="bookForm" method="post" asp-controller="Appointments" asp-action="@(reschedule ? "Reschedule" : "Book")"
+                  class="summary glass@(staff && !reschedule ? " with-patient" : "")">
+                <input type="hidden" name="doctorId" value="@Model.Doctor.Id" />
+                @if (reschedule)
+                {
+                    <input type="hidden" name="id" value="@Model.RescheduleId" />
+                }
+                <h2 class="summary-title">@(reschedule ? "Новое время" : staff ? "Талон пациента" : "Ваш талон")</h2>
+                <div class="talon vertical">
+                    <div class="talon-main">
+                        <div class="talon-head"><span>Талон на приём</span></div>
+                        <div class="talon-time blank" data-slot-time>––:––</div>
+                        <div class="talon-day">@dayLong</div>
+                        <div class="talon-doc">@Model.Doctor.FullName</div>
+                        <div class="talon-spec">@Model.Doctor.Specialty.Name</div>
+                        @if (staff && !reschedule)
+                        {
+                            <div class="talon-patient" data-patient hidden></div>
+                        }
+                    </div>
+                    <div class="talon-stub">Кабинет <span class="cab lg">@Model.Doctor.Cabinet</span></div>
+                </div>
+                <div class="summary-line">
+                    <span class="talon-time blank" data-slot-time>––:––</span>
+                    <div class="what">
+                        <div class="fw-medium">@dayLong</div>
+                        <div class="text-muted text-truncate">@Model.Doctor.FullName, кабинет @Model.Doctor.Cabinet</div>
+                    </div>
+                </div>
+                @if (reschedule && Model.Rescheduling != null)
+                {
+                    <p class="summary-was">Сейчас: <s>@Model.Rescheduling.StartTime.ToString("d MMMM, HH:mm", ru)</s></p>
+                }
                 @if (staff && !reschedule)
                 {
                     <select name="patientId" id="patientSelect" class="form-select" aria-label="Пациент" required>
                         <option value="">Выберите пациента</option>
                         @foreach (var p in Model.Patients)
                         {
-                            <option value="@p.Id">@p.FullName@(string.IsNullOrEmpty(p.Phone) ? "" : $", {p.Phone}")</option>
+                            <option value="@p.Id" data-name="@p.FullName">@p.FullName@(string.IsNullOrEmpty(p.Phone) ? "" : $", {p.Phone}")</option>
                         }
                     </select>
                 }
-                <button type="submit" id="confirmBtn" class="btn btn-primary">@(reschedule ? "Перенести" : staff ? "Записать" : "Записаться")</button>
-            </div>
-        </div>
-    </form>
-}
+                <button type="submit" class="btn btn-primary btn-lg" data-submit>@action</button>
+                <p class="summary-hint" data-hint>@(Model.FreeSlots.Count > 0 ? "Выберите время, и талон заполнится" : "Выберите день со свободным временем")</p>
+            </form>
+        </aside>
+    }
+</div>
 
 @section Scripts {
     <script>
-        document.querySelectorAll('.slot[data-start]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                document.querySelectorAll('.slot.selected').forEach(function (b) { b.classList.remove('selected'); });
-                btn.classList.add('selected');
-                document.getElementById('startInput').value = btn.dataset.start;
-                document.getElementById('slotTime').textContent = btn.dataset.time;
-                var label = btn.dataset.label;
-                document.getElementById('slotLabel').textContent = label.charAt(0).toUpperCase() + label.slice(1);
-                var form = document.getElementById('bookForm');
-                form.classList.remove('d-none');
-                form.scrollIntoView({ block: 'nearest' });
+        (function () {
+            var booking = document.querySelector('[data-booking]');
+            var form = document.getElementById('bookForm');
+            if (!booking || !form) return;
+            var submit = form.querySelector('[data-submit]');
+            var hint = form.querySelector('[data-hint]');
+            var stepTime = document.querySelector('[data-step="time"]');
+            var stepConfirm = document.querySelector('[data-step="confirm"]');
+            var patient = document.getElementById('patientSelect');
+            var patientLine = form.querySelector('[data-patient]');
+
+            function update() {
+                var picked = document.querySelector('.slot-input:checked');
+                form.querySelectorAll('[data-slot-time]').forEach(function (el) {
+                    el.textContent = picked ? picked.dataset.time : '––:––';
+                    el.classList.toggle('blank', !picked);
+                });
+                submit.disabled = !picked;
+                hint.hidden = !!picked;
+                booking.classList.toggle('waiting', !picked);
+                if (stepTime && stepConfirm) {
+                    stepTime.classList.toggle('done', !!picked);
+                    stepTime.classList.toggle('current', !picked);
+                    stepConfirm.classList.toggle('current', !!picked);
+                }
+                if (patient && patientLine) {
+                    var option = patient.selectedOptions[0];
+                    patientLine.hidden = !patient.value;
+                    patientLine.textContent = patient.value ? 'Пациент: ' + option.dataset.name : '';
+                }
+            }
+
+            document.querySelectorAll('.slot-input').forEach(function (input) {
+                input.addEventListener('change', update);
             });
-        });
+            if (patient) patient.addEventListener('change', update);
+            addEventListener('pageshow', update);
+            update();
+
+            if (matchMedia('(max-width: 767.98px)').matches && new URLSearchParams(location.search).has('date')) {
+                document.getElementById('time').scrollIntoView({ block: 'start', behavior: 'instant' });
+            }
+        })();
     </script>
 }

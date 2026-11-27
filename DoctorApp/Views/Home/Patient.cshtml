@@ -30,7 +30,10 @@
     {
         <div class="talon-wrap">
             <partial name="_Talon" model="next" />
-            <div class="talon-actions"><a class="btn btn-light" asp-controller="Appointments" asp-action="My">Подробнее</a></div>
+            <div class="talon-actions">
+                <a class="btn btn-light" asp-controller="Appointments" asp-action="Ticket" asp-route-id="@next.Id" asp-route-print="1"><i class="bi bi-printer"></i> Распечатать</a>
+                <a class="btn btn-quiet" asp-controller="Appointments" asp-action="My">Все записи</a>
+            </div>
         </div>
     }
     else

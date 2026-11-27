@@ -3,6 +3,7 @@ using DoctorApp.Diagnostics;
 using DoctorApp.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using NLog.Web;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -14,7 +15,11 @@ if (args.Contains("--bench"))
     return;
 }
 
+builder.Logging.ClearProviders();
+builder.Host.UseNLog();
+
 builder.Services.AddControllersWithViews();
+builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<ScheduleService>();
@@ -66,4 +71,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+app.Logger.LogInformation("DoctorApp запущен, окружение {Environment}", app.Environment.EnvironmentName);
 app.Run();
